@@ -7,6 +7,9 @@ cp .env.example .env
 docker compose up -d --build
 ```
 
+Las URLs siguientes asumen `NGINX_PORT=80`; si lo cambiaste en `.env`
+(p. ej. 8090 en Windows, que reserva el 80), añade `:PUERTO`.
+
 | URL                              | Qué es                            |
 |----------------------------------|-----------------------------------|
 | http://localhost                 | SPA                               |
