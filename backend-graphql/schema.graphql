@@ -1,0 +1,227 @@
+type ArchitectureTopicType {
+  id: UUID!
+  slug: String!
+  title: String!
+  category: String!
+  description: String!
+  diagramUrl: String!
+  displayOrder: Int!
+}
+
+type AuthPayloadType {
+  token: String!
+  tokenType: String!
+  expiresAt: DateTime!
+}
+
+type CertificationType {
+  id: UUID!
+  name: String!
+  issuer: String!
+  issueDate: Date!
+  expiresAt: Date
+  credentialId: String!
+  credentialUrl: String!
+  badgeUrl: String!
+}
+
+input ContactInput {
+  name: String!
+  email: String!
+  subject: String!
+  message: String!
+  ipAddress: String = null
+  userAgent: String = null
+  recaptchaToken: String = null
+}
+
+type ContactMessageType {
+  id: UUID!
+  name: String!
+  email: String!
+  subject: String!
+  message: String!
+  status: String!
+  createdAt: DateTime!
+}
+
+"""Date (isoformat)"""
+scalar Date
+
+"""Date with time (isoformat)"""
+scalar DateTime
+
+"""Decimal (fixed-point)"""
+scalar Decimal
+
+type EducationType {
+  id: UUID!
+  institution: String!
+  degree: String!
+  field: String!
+  startDate: Date!
+  endDate: Date
+  description: String!
+}
+
+type ExperienceType {
+  id: UUID!
+  company: String!
+  role: String!
+  location: String!
+  startDate: Date!
+  endDate: Date
+  description: String!
+  achievements: [String!]!
+  tech: [String!]!
+  displayOrder: Int!
+}
+
+type Mutation {
+  """Recibe un mensaje de contacto (solo go-api, X-Internal-Token)."""
+  submitContact(input: ContactInput!): ContactMessageType!
+
+  """Credenciales admin (env) → JWT HS256, exp 1h."""
+  adminLogin(username: String!, password: String!): AuthPayloadType!
+
+  """Actualización parcial del perfil (JWT admin)."""
+  updateProfile(input: ProfileInput!): ProfileType!
+
+  """Sube una imagen a /app/media y devuelve su URL (/media/...)."""
+  uploadImage(file: Upload!): String!
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  endCursor: String
+}
+
+type PostConnection {
+  edges: [PostEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int!
+}
+
+type PostEdge {
+  node: PostType!
+  cursor: String!
+}
+
+type PostType {
+  id: UUID!
+  slug: String!
+  title: String!
+  excerpt: String!
+  content: String!
+  coverUrl: String!
+  tags: [String!]!
+  published: Boolean!
+  publishedAt: DateTime
+  readingMinutes: Int!
+}
+
+input ProfileInput {
+  fullName: String
+  headline: String
+  bio: String
+  photoUrl: String
+  cvUrl: String
+  githubUrl: String
+  linkedinUrl: String
+  email: String
+  location: String
+  philosophy: String
+}
+
+type ProfileType {
+  id: UUID!
+  fullName: String!
+  headline: String!
+  bio: String!
+  photoUrl: String!
+  cvUrl: String!
+  githubUrl: String!
+  linkedinUrl: String!
+  email: String!
+  location: String!
+  philosophy: String!
+  updatedAt: DateTime!
+}
+
+type ProjectImageType {
+  id: UUID!
+  url: String!
+  caption: String!
+  displayOrder: Int!
+}
+
+type ProjectType {
+  id: UUID!
+  slug: String!
+  title: String!
+  summary: String!
+  description: String!
+  problem: String!
+  solution: String!
+  outcome: String!
+  stack: [String!]!
+  imageUrl: String!
+  architectureDiagramUrl: String!
+  githubUrl: String!
+  demoUrl: String!
+  videoUrl: String!
+  featured: Boolean!
+  displayOrder: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  images: [ProjectImageType!]!
+}
+
+type Query {
+  """Perfil (singleton)."""
+  profile: ProfileType
+
+  """Proyectos vivos; filtro opcional por destacados."""
+  projects(featured: Boolean = null): [ProjectType!]!
+
+  """Detalle de proyecto por slug."""
+  project(slug: String!): ProjectType
+
+  """Categorías con skills anidadas (DataLoader)."""
+  skillCategories: [SkillCategoryType!]!
+
+  """Experiencia ordenada descendente."""
+  experience: [ExperienceType!]!
+  certifications: [CertificationType!]!
+  education: [EducationType!]!
+
+  """Posts publicados; paginación por cursor y filtro por tag."""
+  posts(first: Int! = 10, after: String = null, tag: String = null): PostConnection!
+
+  """Post publicado por slug."""
+  post(slug: String!): PostType
+  architectureTopics: [ArchitectureTopicType!]!
+}
+
+type SkillCategoryType {
+  id: UUID!
+  name: String!
+  slug: String!
+  displayOrder: Int!
+  skills: [SkillType!]!
+}
+
+type SkillType {
+  id: UUID!
+  name: String!
+  icon: String!
+  level: Int!
+  years: Decimal!
+  description: String!
+  displayOrder: Int!
+}
+
+scalar UUID
+
+"""Represents a file upload."""
+scalar Upload
