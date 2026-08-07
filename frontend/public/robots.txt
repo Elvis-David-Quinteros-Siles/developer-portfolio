@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /graphql
+
+Sitemap: https://elvisquinteros.dev/sitemap.xml
