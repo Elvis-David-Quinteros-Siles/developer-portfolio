@@ -1,5 +1,12 @@
 # Portfolio — Plataforma de Portafolio Profesional Cloud-Native
 
+<!-- Al publicar en GitHub, sustituye OWNER/REPO por tu ruta real -->
+[![stack](https://github.com/OWNER/REPO/actions/workflows/stack.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/stack.yml)
+[![gateway](https://github.com/OWNER/REPO/actions/workflows/gateway.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/gateway.yml)
+[![backend-go](https://github.com/OWNER/REPO/actions/workflows/backend-go.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/backend-go.yml)
+[![backend-graphql](https://github.com/OWNER/REPO/actions/workflows/backend-graphql.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/backend-graphql.yml)
+[![frontend](https://github.com/OWNER/REPO/actions/workflows/frontend.yml/badge.svg)](https://github.com/OWNER/REPO/actions/workflows/frontend.yml)
+
 Portafolio de ingeniería construido como **sistema de microservicios**: el
 propio producto demuestra backend, arquitectura de software, sistemas
 distribuidos y DevOps.

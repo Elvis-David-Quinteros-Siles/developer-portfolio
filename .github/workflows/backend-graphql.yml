@@ -1,0 +1,34 @@
+name: backend-graphql
+
+on:
+  push:
+    branches: [main]
+    paths: ["backend-graphql/**", ".github/workflows/backend-graphql.yml"]
+  pull_request:
+    paths: ["backend-graphql/**", ".github/workflows/backend-graphql.yml"]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Docker build
+        run: docker build -t portfolio-graphql backend-graphql
+      - name: Django system check
+        run: |
+          docker run --rm --entrypoint python \
+            -e DJANGO_SECRET_KEY=ci-dummy \
+            -e DATABASE_URL=postgres://ci:ci@localhost:5432/ci \
+            -e REDIS_URL=redis://localhost:6379/0 \
+            -e JWT_SECRET=ci-dummy \
+            -e INTERNAL_SERVICE_TOKEN=ci-dummy \
+            portfolio-graphql manage.py check
+      - name: Migraciones sin drift (makemigrations --check)
+        run: |
+          docker run --rm --entrypoint python \
+            -e DJANGO_SECRET_KEY=ci-dummy \
+            -e DATABASE_URL=postgres://ci:ci@localhost:5432/ci \
+            -e REDIS_URL=redis://localhost:6379/0 \
+            -e JWT_SECRET=ci-dummy \
+            -e INTERNAL_SERVICE_TOKEN=ci-dummy \
+            portfolio-graphql manage.py makemigrations portfolio --check --dry-run
