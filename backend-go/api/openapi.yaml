@@ -1,0 +1,852 @@
+openapi: 3.0.3
+info:
+  title: Portfolio REST API (go-api)
+  description: |
+    Read-side REST API of the portfolio system (Gin + Clean Architecture).
+
+    - Every read filters soft-deleted rows (`deleted_at IS NULL`).
+    - Django owns the schema and all writes (ADR-0003); `POST /contact` is
+      delegated to the Django GraphQL `submitContact` mutation.
+    - Success responses use the envelope `{data, meta:{request_id, timestamp}}`.
+    - Errors follow RFC 7807 (`application/problem+json`).
+  version: 1.0.0
+  contact:
+    name: Portfolio
+servers:
+  - url: /api/v1
+    description: Behind the gateway (canonical prefix)
+tags:
+  - name: content
+    description: Public read-only portfolio content
+  - name: contact
+    description: Contact form (delegated to Django)
+  - name: auth
+    description: Admin authentication
+  - name: admin
+    description: Admin endpoints (JWT required)
+  - name: health
+    description: Liveness and readiness probes (served outside /api/v1)
+  - name: docs
+    description: API documentation
+
+paths:
+  /profile:
+    get:
+      tags: [content]
+      summary: Get the profile (logical singleton)
+      operationId: getProfile
+      responses:
+        "200":
+          description: Profile found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/Profile"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /projects:
+    get:
+      tags: [content]
+      summary: List projects
+      operationId: listProjects
+      parameters:
+        - name: featured
+          in: query
+          required: false
+          description: When `true`, only featured projects are returned.
+          schema:
+            type: boolean
+      responses:
+        "200":
+          description: List of projects (summary representation, no gallery)
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ProjectSummary"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /projects/{slug}:
+    get:
+      tags: [content]
+      summary: Get a project by slug (detail with image gallery)
+      operationId: getProject
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Project found
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ProjectDetail"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /skills:
+    get:
+      tags: [content]
+      summary: List skill categories with nested skills
+      operationId: listSkills
+      responses:
+        "200":
+          description: Categories ordered by display_order with nested skills
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/SkillCategory"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /experience:
+    get:
+      tags: [content]
+      summary: List professional experience (most recent first)
+      operationId: listExperience
+      responses:
+        "200":
+          description: Experience entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Experience"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /architecture:
+    get:
+      tags: [content]
+      summary: List architecture topics
+      operationId: listArchitecture
+      responses:
+        "200":
+          description: Architecture topics ordered for display
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ArchitectureTopic"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /certifications:
+    get:
+      tags: [content]
+      summary: List certifications (most recent first)
+      operationId: listCertifications
+      responses:
+        "200":
+          description: Certifications
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Certification"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /education:
+    get:
+      tags: [content]
+      summary: List education entries (most recent first)
+      operationId: listEducation
+      responses:
+        "200":
+          description: Education entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Education"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /contact:
+    post:
+      tags: [contact]
+      summary: Submit a contact message
+      description: |
+        Validates the payload and delegates persistence to the Django
+        `submitContact` GraphQL mutation with the internal service token
+        (5s timeout). go-api never writes to PostgreSQL (ADR-0003).
+      operationId: submitContact
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ContactRequest"
+      responses:
+        "202":
+          description: Message accepted and persisted by the write side
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/ContactAccepted"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "422":
+          $ref: "#/components/responses/ValidationError"
+        "502":
+          description: The message service rejected the request
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "503":
+          description: The message service (Django) is unavailable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /auth/login:
+    post:
+      tags: [auth]
+      summary: Admin login
+      description: |
+        Verifies the admin credentials (constant-time comparison against the
+        environment-provided values) and issues an HS256 JWT with claims
+        `sub`, `role=admin`, `iat`, `exp` and a 1 hour TTL (ADR-0004).
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Credentials accepted, token issued
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        $ref: "#/components/schemas/LoginResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          description: Invalid credentials
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+  /admin/contact-messages:
+    get:
+      tags: [admin]
+      summary: List received contact messages (paginated)
+      operationId: listContactMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          required: false
+          description: 1-based page number (defaults to 1).
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: page_size
+          in: query
+          required: false
+          description: Page size (defaults to 20, capped at 100).
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: One page of messages, newest first
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/Envelope"
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/ContactMessage"
+                      meta:
+                        type: object
+                        properties:
+                          pagination:
+                            $ref: "#/components/schemas/Pagination"
+        "401":
+          description: Missing, invalid or expired token
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "403":
+          description: Token valid but role is not admin
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /openapi.yaml:
+    get:
+      tags: [docs]
+      summary: This OpenAPI 3 document
+      operationId: getOpenAPISpec
+      responses:
+        "200":
+          description: OpenAPI specification
+          content:
+            application/yaml:
+              schema:
+                type: string
+
+  /docs:
+    get:
+      tags: [docs]
+      summary: Swagger UI
+      operationId: getDocs
+      responses:
+        "200":
+          description: Embedded Swagger UI page
+          content:
+            text/html:
+              schema:
+                type: string
+
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness probe
+      description: Served at the server root, outside the /api/v1 prefix.
+      servers:
+        - url: /
+      operationId: healthz
+      responses:
+        "200":
+          description: Process is alive
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness probe (PostgreSQL ping)
+      description: Served at the server root, outside the /api/v1 prefix.
+      servers:
+        - url: /
+      operationId: readyz
+      responses:
+        "200":
+          description: Dependencies reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ready
+        "503":
+          description: Database not reachable
+          content:
+            application/problem+json:
+              schema:
+                $ref: "#/components/schemas/Problem"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: HS256 JWT issued by POST /api/v1/auth/login (ADR-0004).
+
+  responses:
+    BadRequest:
+      description: Malformed request body
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    ValidationError:
+      description: Domain validation failed (per-field detail in `errors`)
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    NotFound:
+      description: Resource not found
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+    InternalError:
+      description: Unexpected server error
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+
+  schemas:
+    Envelope:
+      type: object
+      required: [data, meta]
+      properties:
+        data:
+          description: Endpoint-specific payload
+          nullable: true
+        meta:
+          $ref: "#/components/schemas/Meta"
+
+    Meta:
+      type: object
+      required: [request_id, timestamp]
+      properties:
+        request_id:
+          type: string
+          description: Propagated or generated X-Request-ID
+          example: 4f6c1c1e8f0a4d2b9c3e5a7d1b2c3d4e
+        timestamp:
+          type: string
+          format: date-time
+          example: "2026-08-06T12:00:00Z"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        page_size:
+          type: integer
+          example: 20
+        total_items:
+          type: integer
+          format: int64
+          example: 42
+        total_pages:
+          type: integer
+          example: 3
+
+    Problem:
+      type: object
+      description: RFC 7807 problem details
+      required: [type, title, status]
+      properties:
+        type:
+          type: string
+          example: about:blank
+        title:
+          type: string
+          example: Not Found
+        status:
+          type: integer
+          example: 404
+        detail:
+          type: string
+          example: the requested resource does not exist
+        instance:
+          type: string
+          example: /api/v1/projects/x
+        errors:
+          type: object
+          additionalProperties:
+            type: string
+          description: Per-field validation messages (extension member)
+
+    Profile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        full_name:
+          type: string
+        headline:
+          type: string
+        bio:
+          type: string
+        photo_url:
+          type: string
+        cv_url:
+          type: string
+        github_url:
+          type: string
+        linkedin_url:
+          type: string
+        email:
+          type: string
+          format: email
+        location:
+          type: string
+        philosophy:
+          type: string
+        updated_at:
+          type: string
+          format: date-time
+
+    ProjectSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        stack:
+          type: array
+          items:
+            type: string
+        image_url:
+          type: string
+        architecture_diagram_url:
+          type: string
+        github_url:
+          type: string
+        demo_url:
+          type: string
+        video_url:
+          type: string
+        featured:
+          type: boolean
+        display_order:
+          type: integer
+
+    ProjectDetail:
+      allOf:
+        - $ref: "#/components/schemas/ProjectSummary"
+        - type: object
+          properties:
+            description:
+              type: string
+              description: Markdown body
+            problem:
+              type: string
+            solution:
+              type: string
+            outcome:
+              type: string
+            images:
+              type: array
+              description: project_image gallery ordered by display_order
+              items:
+                $ref: "#/components/schemas/ProjectImage"
+
+    ProjectImage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        url:
+          type: string
+        caption:
+          type: string
+        display_order:
+          type: integer
+
+    SkillCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        display_order:
+          type: integer
+        skills:
+          type: array
+          items:
+            $ref: "#/components/schemas/Skill"
+
+    Skill:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        icon:
+          type: string
+          example: simple-icons:go
+        level:
+          type: integer
+          minimum: 1
+          maximum: 5
+        years:
+          type: number
+          format: double
+        description:
+          type: string
+        display_order:
+          type: integer
+
+    Experience:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        company:
+          type: string
+        role:
+          type: string
+        location:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+          description: null means current position
+        description:
+          type: string
+        achievements:
+          type: array
+          items:
+            type: string
+        tech:
+          type: array
+          items:
+            type: string
+        display_order:
+          type: integer
+
+    Certification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        issuer:
+          type: string
+        issue_date:
+          type: string
+          format: date
+        expires_at:
+          type: string
+          format: date
+          nullable: true
+        credential_id:
+          type: string
+        credential_url:
+          type: string
+        badge_url:
+          type: string
+
+    Education:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        institution:
+          type: string
+        degree:
+          type: string
+        field:
+          type: string
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        description:
+          type: string
+
+    ArchitectureTopic:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        slug:
+          type: string
+        title:
+          type: string
+        category:
+          type: string
+          example: patterns
+        description:
+          type: string
+          description: Markdown body
+        diagram_url:
+          type: string
+        display_order:
+          type: integer
+
+    ContactRequest:
+      type: object
+      required: [name, email, subject, message]
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 120
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        subject:
+          type: string
+          minLength: 3
+          maxLength: 200
+        message:
+          type: string
+          minLength: 10
+          maxLength: 5000
+
+    ContactAccepted:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Id of the message persisted by Django
+        status:
+          type: string
+          example: accepted
+
+    LoginRequest:
+      type: object
+      required: [username, password]
+      properties:
+        username:
+          type: string
+        password:
+          type: string
+          format: password
+
+    LoginResponse:
+      type: object
+      properties:
+        token:
+          type: string
+          description: HS256 JWT (claims sub, role=admin, iat, exp)
+        token_type:
+          type: string
+          example: Bearer
+        expires_in:
+          type: integer
+          format: int64
+          example: 3600
+
+    ContactMessage:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        subject:
+          type: string
+        message:
+          type: string
+        ip_address:
+          type: string
+          description: Empty when unknown
+        user_agent:
+          type: string
+        status:
+          type: string
+          enum: [new, read, replied]
+        created_at:
+          type: string
+          format: date-time
