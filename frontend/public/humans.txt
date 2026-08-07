@@ -1,0 +1,19 @@
+/* TEAM */
+  Developer & Architect: Elvis Quinteros
+  Contact: dquinteros630 [at] gmail.com
+  GitHub: https://github.com/elvisquinteros
+  LinkedIn: https://www.linkedin.com/in/elvisquinteros
+  Location: La Paz, Bolivia
+
+/* SITE */
+  Language: Español
+  Standards: HTML5, CSS3, ES2022, WAI-ARIA
+  Frontend: React 19, TypeScript, Vite, TailwindCSS v4, Framer Motion,
+            TanStack Query, Apollo Client, Zustand, React Hook Form, Zod
+  Backend:  Go (REST), Django (GraphQL), PostgreSQL, Redis, Celery
+  Infra:    Docker multi-stage, nginx-unprivileged, gateway propio,
+            redes segmentadas edge/internal/data
+  Fonts:    Inter Variable, JetBrains Mono (self-hosted)
+
+/* NOTE */
+  La terminal de la portada acepta comandos. Prueba 'help'.
