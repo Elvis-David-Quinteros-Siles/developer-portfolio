@@ -35,6 +35,14 @@ export function formatDate(date: string): string {
   return `${d.getUTCDate()} ${MONTHS_ES[d.getUTCMonth()] ?? ""} ${d.getUTCFullYear()}`;
 }
 
+/**
+ * Imagen de prueba local por slug (public/showcase, ver scripts/generate-showcase.mjs).
+ * Los consumidores deben tener fallback `onError` por si el archivo no existe.
+ */
+export function showcaseImage(slug: string): string {
+  return `/showcase/${slug}.webp`;
+}
+
 /** Iniciales para covers placeholder: "Event-Driven Orders" → "EO". */
 export function initials(text: string): string {
   return text

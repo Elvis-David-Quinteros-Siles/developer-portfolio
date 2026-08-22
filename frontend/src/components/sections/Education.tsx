@@ -1,6 +1,7 @@
 import { GraduationCap } from "lucide-react";
 
 import { SectionHeading } from "@/components/layout/SectionHeading";
+import { ParallaxGlow, ParallaxWatermark } from "@/components/motion/Parallax";
 import { Reveal } from "@/components/motion/Reveal";
 import { useEducation } from "@/hooks/usePortfolioData";
 import { formatMonth } from "@/lib/utils";
@@ -9,8 +10,14 @@ export function Education() {
   const { data: education } = useEducation();
 
   return (
-    <section id="education" aria-label="Educación" className="scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <section
+      id="education"
+      aria-label="Educación"
+      className="relative scroll-mt-20 overflow-hidden"
+    >
+      <ParallaxWatermark text="07" />
+      <ParallaxGlow tone="violet" className="-right-48 top-0" speed={0.2} />
+      <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="07 · formación"
           title="Educación"

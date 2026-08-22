@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { SectionHeading } from "@/components/layout/SectionHeading";
+import { Parallax, ParallaxGlow, ParallaxWatermark } from "@/components/motion/Parallax";
 import { Reveal } from "@/components/motion/Reveal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -58,7 +59,15 @@ export function Contact({ getRecaptchaToken }: ContactProps) {
     formState: { errors, isSubmitting },
   } = useForm<ContactForm>({
     resolver: zodResolver(contactSchema),
-    defaultValues: { name: "", email: "", subject: "", message: "", website: "" },
+    // Valida al salir de cada campo (no en cada tecla ni solo al enviar)
+    mode: "onTouched",
+    defaultValues: {
+      name: "",
+      email: "",
+      subject: "",
+      message: "",
+      website: "",
+    },
   });
 
   const onSubmit = handleSubmit(async (values) => {
@@ -87,11 +96,13 @@ export function Contact({ getRecaptchaToken }: ContactProps) {
   const success = mutation.isSuccess || botTrapped;
 
   return (
-    <section id="contact" aria-label="Contacto" className="relative scroll-mt-20 bg-surface/30">
-      <div
-        className="absolute bottom-0 left-1/2 h-72 w-[36rem] -translate-x-1/2 rounded-full bg-violet/10 blur-[110px]"
-        aria-hidden="true"
-      />
+    <section
+      id="contact"
+      aria-label="Contacto"
+      className="relative scroll-mt-20 overflow-hidden bg-surface/30"
+    >
+      <ParallaxWatermark text="08" />
+      <ParallaxGlow tone="violet" className="bottom-0 left-1/2 -translate-x-1/2" speed={0.35} />
       <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="08 · contacto"
@@ -128,154 +139,175 @@ export function Contact({ getRecaptchaToken }: ContactProps) {
           </Reveal>
 
           <Reveal delay={0.1}>
-            <Card>
-              <CardContent className="p-6 sm:p-8">
-                {success ? (
-                  <div
-                    role="status"
-                    className="flex flex-col items-center gap-3 py-10 text-center"
-                  >
-                    <CheckCircle2 className="size-12 text-success" aria-hidden="true" />
-                    <h3 className="text-lg font-semibold text-ink">Mensaje enviado</h3>
-                    <p className="max-w-sm text-sm text-muted">
-                      Gracias por escribir. Tu mensaje ya está en la cola — te responderé pronto.
-                    </p>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        mutation.reset();
-                        setBotTrapped(false);
-                      }}
+            <Parallax speed={-0.06}>
+              <Card>
+                <CardContent className="p-6 sm:p-8">
+                  {success ? (
+                    <div
+                      role="status"
+                      className="flex flex-col items-center gap-3 py-10 text-center"
                     >
-                      Enviar otro mensaje
-                    </Button>
-                  </div>
-                ) : (
-                  <form onSubmit={(e) => void onSubmit(e)} noValidate>
-                    <div className="grid gap-5 sm:grid-cols-2">
-                      <div>
-                        <Label htmlFor="contact-name">Nombre</Label>
-                        <Input
-                          id="contact-name"
-                          autoComplete="name"
-                          placeholder="Tu nombre"
-                          aria-invalid={Boolean(errors.name)}
-                          aria-describedby={errors.name ? "contact-name-error" : undefined}
-                          {...register("name")}
-                        />
-                        {errors.name && (
-                          <p id="contact-name-error" role="alert" className="mt-1.5 text-xs text-danger">
-                            {errors.name.message}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <Label htmlFor="contact-email">Email</Label>
-                        <Input
-                          id="contact-email"
-                          type="email"
-                          autoComplete="email"
-                          placeholder="tu@email.com"
-                          aria-invalid={Boolean(errors.email)}
-                          aria-describedby={errors.email ? "contact-email-error" : undefined}
-                          {...register("email")}
-                        />
-                        {errors.email && (
-                          <p id="contact-email-error" role="alert" className="mt-1.5 text-xs text-danger">
-                            {errors.email.message}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="mt-5">
-                      <Label htmlFor="contact-subject">Asunto</Label>
-                      <Input
-                        id="contact-subject"
-                        placeholder="¿De qué quieres hablar?"
-                        aria-invalid={Boolean(errors.subject)}
-                        aria-describedby={errors.subject ? "contact-subject-error" : undefined}
-                        {...register("subject")}
-                      />
-                      {errors.subject && (
-                        <p id="contact-subject-error" role="alert" className="mt-1.5 text-xs text-danger">
-                          {errors.subject.message}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="mt-5">
-                      <Label htmlFor="contact-message">Mensaje</Label>
-                      <Textarea
-                        id="contact-message"
-                        placeholder="Cuéntame sobre tu proyecto o propuesta…"
-                        aria-invalid={Boolean(errors.message)}
-                        aria-describedby={errors.message ? "contact-message-error" : undefined}
-                        {...register("message")}
-                      />
-                      {errors.message && (
-                        <p id="contact-message-error" role="alert" className="mt-1.5 text-xs text-danger">
-                          {errors.message.message}
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Honeypot: oculto para humanos, irresistible para bots */}
-                    <div className="sr-only" aria-hidden="true">
-                      <label htmlFor="contact-website">No rellenes este campo</label>
-                      <input
-                        id="contact-website"
-                        type="text"
-                        tabIndex={-1}
-                        autoComplete="off"
-                        {...register("website")}
-                      />
-                    </div>
-
-                    {mutation.isError && (
-                      <div
-                        role="alert"
-                        className="mt-5 flex items-start gap-2.5 rounded-lg border border-danger/30 bg-danger/10 p-3.5 text-sm text-danger"
+                      <CheckCircle2 className="size-12 text-success" aria-hidden="true" />
+                      <h3 className="text-lg font-semibold text-ink">Mensaje enviado</h3>
+                      <p className="max-w-sm text-sm text-muted">
+                        Gracias por escribir. Tu mensaje ya está en la cola — te responderé pronto.
+                      </p>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          mutation.reset();
+                          setBotTrapped(false);
+                        }}
                       >
-                        {isRateLimited ? (
+                        Enviar otro mensaje
+                      </Button>
+                    </div>
+                  ) : (
+                    <form onSubmit={(e) => void onSubmit(e)} noValidate>
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <div>
+                          <Label htmlFor="contact-name">Nombre</Label>
+                          <Input
+                            id="contact-name"
+                            autoComplete="name"
+                            placeholder="Tu nombre"
+                            aria-invalid={Boolean(errors.name)}
+                            aria-describedby={errors.name ? "contact-name-error" : undefined}
+                            {...register("name")}
+                          />
+                          {errors.name && (
+                            <p
+                              id="contact-name-error"
+                              role="alert"
+                              className="mt-1.5 text-xs text-danger"
+                            >
+                              {errors.name.message}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <Label htmlFor="contact-email">Email</Label>
+                          <Input
+                            id="contact-email"
+                            type="email"
+                            autoComplete="email"
+                            placeholder="tu@email.com"
+                            aria-invalid={Boolean(errors.email)}
+                            aria-describedby={errors.email ? "contact-email-error" : undefined}
+                            {...register("email")}
+                          />
+                          {errors.email && (
+                            <p
+                              id="contact-email-error"
+                              role="alert"
+                              className="mt-1.5 text-xs text-danger"
+                            >
+                              {errors.email.message}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="mt-5">
+                        <Label htmlFor="contact-subject">Asunto</Label>
+                        <Input
+                          id="contact-subject"
+                          placeholder="¿De qué quieres hablar?"
+                          aria-invalid={Boolean(errors.subject)}
+                          aria-describedby={errors.subject ? "contact-subject-error" : undefined}
+                          {...register("subject")}
+                        />
+                        {errors.subject && (
+                          <p
+                            id="contact-subject-error"
+                            role="alert"
+                            className="mt-1.5 text-xs text-danger"
+                          >
+                            {errors.subject.message}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="mt-5">
+                        <Label htmlFor="contact-message">Mensaje</Label>
+                        <Textarea
+                          id="contact-message"
+                          placeholder="Cuéntame sobre tu proyecto o propuesta…"
+                          aria-invalid={Boolean(errors.message)}
+                          aria-describedby={errors.message ? "contact-message-error" : undefined}
+                          {...register("message")}
+                        />
+                        {errors.message && (
+                          <p
+                            id="contact-message-error"
+                            role="alert"
+                            className="mt-1.5 text-xs text-danger"
+                          >
+                            {errors.message.message}
+                          </p>
+                        )}
+                      </div>
+
+                      {/* Honeypot: oculto para humanos, irresistible para bots */}
+                      <div className="sr-only" aria-hidden="true">
+                        <label htmlFor="contact-website">No rellenes este campo</label>
+                        <input
+                          id="contact-website"
+                          type="text"
+                          tabIndex={-1}
+                          autoComplete="off"
+                          {...register("website")}
+                        />
+                      </div>
+
+                      {mutation.isError && (
+                        <div
+                          role="alert"
+                          className="mt-5 flex items-start gap-2.5 rounded-lg border border-danger/30 bg-danger/10 p-3.5 text-sm text-danger"
+                        >
+                          {isRateLimited ? (
+                            <>
+                              <Timer className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                              <span>
+                                Has enviado demasiados mensajes en poco tiempo. El rate limit del
+                                gateway está haciendo su trabajo — espera un minuto y vuelve a
+                                intentarlo.
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <AlertTriangle
+                                className="mt-0.5 size-4 shrink-0"
+                                aria-hidden="true"
+                              />
+                              <span>
+                                No se pudo enviar el mensaje. Inténtalo de nuevo o escríbeme
+                                directamente a {profile.email}.
+                              </span>
+                            </>
+                          )}
+                        </div>
+                      )}
+
+                      <Button type="submit" size="lg" className="mt-6 w-full" disabled={sending}>
+                        {sending ? (
                           <>
-                            <Timer className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                              Has enviado demasiados mensajes en poco tiempo. El rate limit del
-                              gateway está haciendo su trabajo — espera un minuto y vuelve a
-                              intentarlo.
-                            </span>
+                            <Loader2 className="animate-spin" aria-hidden="true" />
+                            Enviando…
                           </>
                         ) : (
                           <>
-                            <AlertTriangle className="mt-0.5 size-4 shrink-0" aria-hidden="true" />
-                            <span>
-                              No se pudo enviar el mensaje. Inténtalo de nuevo o escríbeme
-                              directamente a {profile.email}.
-                            </span>
+                            <Send aria-hidden="true" />
+                            Enviar mensaje
                           </>
                         )}
-                      </div>
-                    )}
-
-                    <Button type="submit" size="lg" className="mt-6 w-full" disabled={sending}>
-                      {sending ? (
-                        <>
-                          <Loader2 className="animate-spin" aria-hidden="true" />
-                          Enviando…
-                        </>
-                      ) : (
-                        <>
-                          <Send aria-hidden="true" />
-                          Enviar mensaje
-                        </>
-                      )}
-                    </Button>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
+                      </Button>
+                    </form>
+                  )}
+                </CardContent>
+              </Card>
+            </Parallax>
           </Reveal>
         </div>
       </div>

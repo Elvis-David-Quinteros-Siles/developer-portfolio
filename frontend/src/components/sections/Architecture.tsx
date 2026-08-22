@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { SectionHeading } from "@/components/layout/SectionHeading";
+import { Parallax, ParallaxGlow, ParallaxWatermark } from "@/components/motion/Parallax";
 import { Reveal } from "@/components/motion/Reveal";
 import { SystemDiagram } from "@/components/sections/SystemDiagram";
 import { Badge } from "@/components/ui/badge";
@@ -42,18 +43,20 @@ const CATEGORY_LABELS: Record<ArchitectureTopic["category"], string> = {
 function TopicCard({ topic, index }: { topic: ArchitectureTopic; index: number }) {
   const Icon = TOPIC_ICONS[topic.slug] ?? Layers;
   return (
-    <Reveal delay={Math.min(index * 0.05, 0.25)}>
-      <Card className="h-full">
-        <CardContent className="p-5">
-          <div className="flex items-center gap-3">
-            <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-violet/20 text-accent">
-              <Icon className="size-5" aria-hidden="true" />
-            </span>
-            <h4 className="font-semibold text-ink">{topic.title}</h4>
-          </div>
-          <p className="mt-3 text-sm leading-relaxed text-muted">{topic.description}</p>
-        </CardContent>
-      </Card>
+    <Reveal delay={Math.min(index * 0.05, 0.25)} className="h-full">
+      <Parallax speed={(index % 3) * 0.03 - 0.03} className="h-full">
+        <Card className="h-full">
+          <CardContent className="p-5">
+            <div className="flex items-center gap-3">
+              <span className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-accent/20 to-violet/20 text-accent">
+                <Icon className="size-5" aria-hidden="true" />
+              </span>
+              <h4 className="font-semibold text-ink">{topic.title}</h4>
+            </div>
+            <p className="mt-3 text-sm leading-relaxed text-muted">{topic.description}</p>
+          </CardContent>
+        </Card>
+      </Parallax>
     </Reveal>
   );
 }
@@ -66,8 +69,14 @@ export function Architecture() {
   );
 
   return (
-    <section id="architecture" aria-label="Arquitectura" className="scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <section
+      id="architecture"
+      aria-label="Arquitectura"
+      className="relative scroll-mt-20 overflow-hidden"
+    >
+      <ParallaxWatermark text="05" />
+      <ParallaxGlow tone="violet" className="-right-56 top-1/3" speed={0.3} />
+      <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="05 · arquitectura"
           title="Arquitectura de software"
@@ -75,7 +84,9 @@ export function Architecture() {
         />
 
         <Reveal className="mb-14">
-          <SystemDiagram />
+          <Parallax speed={0.05}>
+            <SystemDiagram />
+          </Parallax>
         </Reveal>
 
         <div className="space-y-12">

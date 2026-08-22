@@ -9,6 +9,7 @@ import { Education } from "@/components/sections/Education";
 import { Experience } from "@/components/sections/Experience";
 import { Hero } from "@/components/sections/Hero";
 import { Projects } from "@/components/sections/Projects";
+import { Showcase } from "@/components/sections/Showcase";
 import { Skills } from "@/components/sections/Skills";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
@@ -30,6 +31,7 @@ export default function Home() {
   return (
     <>
       <Hero />
+      <Showcase />
       <About />
       <Skills />
       <Experience />

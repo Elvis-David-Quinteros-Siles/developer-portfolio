@@ -21,7 +21,9 @@
   /* Texto (escala zinc) */
   --color-ink: #e4e4e7;
   --color-muted: #a1a1aa;
-  --color-faint: #6b6b76;
+  /* AA 4.5:1 sobre bg/surface/raised/overlay (5.2–6.1:1); tomado del estilo
+   * "Modern Dark" (Linear) — un escalón por debajo de muted (~7:1). */
+  --color-faint: #8a8f98;
 
   /* Acento eléctrico: cian, con violeta como segundo tono de gradiente */
   --color-accent: #22d3ee;
@@ -60,7 +62,8 @@ html {
     scroll-behavior: auto;
   }
   .animate-blink,
-  .animate-flow {
+  .animate-flow,
+  .animate-ping {
     animation: none;
   }
 }
@@ -70,9 +73,31 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+/* Tailwind v4 ya no pone cursor pointer en botones; y touch-action evita el
+ * delay de 300ms del double-tap-zoom en móvil sobre elementos interactivos. */
+a,
+button,
+input,
+textarea,
+select,
+[role="button"] {
+  touch-action: manipulation;
+}
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]) {
+  cursor: pointer;
+}
+
 ::selection {
   background: rgb(34 211 238 / 0.25);
   color: #fff;
+}
+
+/* outline-color pre-cargado: transition-colors la incluye, y sin esto el ring
+ * de foco hace un fade de ~200ms desde currentColor (invisible en botones
+ * primarios, donde currentColor es el color del fondo). */
+* {
+  outline-color: var(--color-accent);
 }
 
 :focus-visible {

@@ -1,3 +1,5 @@
+import { useState } from "react";
+
 import {
   Activity,
   Atom,
@@ -20,6 +22,7 @@ import {
 } from "lucide-react";
 
 import { SectionHeading } from "@/components/layout/SectionHeading";
+import { ParallaxGlow, ParallaxWatermark } from "@/components/motion/Parallax";
 import { Reveal } from "@/components/motion/Reveal";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -111,21 +114,32 @@ function SkillCard({ skill, index }: { skill: Skill; index: number }) {
 
 export function Skills() {
   const { data: categories } = useSkillCategories();
+  const [selected, setSelected] = useState<string>();
   const sorted = [...categories].sort((a, b) => a.display_order - b.display_order);
   const first = sorted[0];
 
   if (!first) return null;
 
+  // La query pinta primero con el fallback local; si la data real de la API
+  // trae otros slugs, la selección previa puede dejar de existir.
+  const active = selected && sorted.some((cat) => cat.slug === selected) ? selected : first.slug;
+
   return (
-    <section id="skills" aria-label="Tecnologías" className="scroll-mt-20 bg-surface/30">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <section
+      id="skills"
+      aria-label="Tecnologías"
+      className="relative scroll-mt-20 overflow-hidden bg-surface/30"
+    >
+      <ParallaxWatermark text="02" />
+      <ParallaxGlow tone="accent" className="-right-48 top-0" speed={0.3} />
+      <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="02 · stack"
           title="Tecnologías"
           description="Herramientas que uso a diario, con nivel real y años de experiencia — sin inflar."
         />
 
-        <Tabs defaultValue={first.slug}>
+        <Tabs value={active} onValueChange={setSelected}>
           <Reveal>
             <TabsList aria-label="Categorías de tecnologías">
               {sorted.map((cat) => (

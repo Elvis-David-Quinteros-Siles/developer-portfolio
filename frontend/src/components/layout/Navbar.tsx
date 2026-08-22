@@ -1,6 +1,6 @@
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useScroll } from "framer-motion";
 import { FileDown, Menu, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,10 @@ export function Navbar() {
   const { mobileMenuOpen, setMobileMenuOpen, toggleMobileMenu } = useUiStore();
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const { scrollYProgress } = useScroll();
+
+  const isActive = (to: string) => to === "/blog" && location.pathname.startsWith("/blog");
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 8);
@@ -33,6 +37,19 @@ export function Navbar() {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location.pathname, location.hash, setMobileMenuOpen]);
+
+  // Escape cierra el menú móvil y devuelve el foco al botón que lo abrió
+  useEffect(() => {
+    if (!mobileMenuOpen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setMobileMenuOpen(false);
+        menuButtonRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileMenuOpen, setMobileMenuOpen]);
 
   return (
     <header
@@ -63,11 +80,10 @@ export function Navbar() {
             <li key={link.to}>
               <Link
                 to={link.to}
+                aria-current={isActive(link.to) ? "page" : undefined}
                 className={cn(
                   "rounded-lg px-3 py-2 text-sm transition-colors hover:text-ink",
-                  link.to === "/blog" && location.pathname.startsWith("/blog")
-                    ? "text-accent"
-                    : "text-muted",
+                  isActive(link.to) ? "text-accent" : "text-muted",
                 )}
               >
                 {link.label}
@@ -84,6 +100,7 @@ export function Navbar() {
             </a>
           </Button>
           <Button
+            ref={menuButtonRef}
             variant="ghost"
             size="icon"
             className="lg:hidden"
@@ -96,6 +113,13 @@ export function Navbar() {
           </Button>
         </div>
       </nav>
+
+      {/* Progreso de lectura: sigue el scroll 1:1 (no es animación decorativa) */}
+      <motion.div
+        aria-hidden="true"
+        style={{ scaleX: scrollYProgress }}
+        className="absolute inset-x-0 top-16 h-0.5 origin-left bg-gradient-to-r from-accent to-violet"
+      />
 
       <AnimatePresence>
         {mobileMenuOpen && (
@@ -112,7 +136,11 @@ export function Navbar() {
                 <li key={link.to}>
                   <Link
                     to={link.to}
-                    className="block rounded-lg px-3 py-2.5 text-sm text-muted transition-colors hover:bg-raised hover:text-ink"
+                    aria-current={isActive(link.to) ? "page" : undefined}
+                    className={cn(
+                      "block rounded-lg px-3 py-2.5 text-sm transition-colors hover:bg-raised hover:text-ink",
+                      isActive(link.to) ? "text-accent" : "text-muted",
+                    )}
                   >
                     {link.label}
                   </Link>

@@ -1,6 +1,7 @@
 import { Compass, Quote, Target, Wrench } from "lucide-react";
 
 import { SectionHeading } from "@/components/layout/SectionHeading";
+import { Parallax, ParallaxGlow, ParallaxWatermark } from "@/components/motion/Parallax";
 import { Reveal } from "@/components/motion/Reveal";
 import { Card, CardContent } from "@/components/ui/card";
 import { useProfile } from "@/hooks/usePortfolioData";
@@ -27,8 +28,10 @@ export function About() {
   const { data: profile } = useProfile();
 
   return (
-    <section id="about" aria-label="Sobre mí" className="scroll-mt-20">
-      <div className="mx-auto max-w-6xl px-4 py-24 sm:px-6">
+    <section id="about" aria-label="Sobre mí" className="relative scroll-mt-20 overflow-hidden">
+      <ParallaxWatermark text="01" />
+      <ParallaxGlow tone="violet" className="-left-40 top-1/3" speed={0.25} />
+      <div className="relative mx-auto max-w-6xl px-4 py-24 sm:px-6">
         <SectionHeading
           eyebrow="01 · sobre mí"
           title="Historia y filosofía"
@@ -37,7 +40,7 @@ export function About() {
 
         <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr]">
           <Reveal>
-            <div className="space-y-5 leading-relaxed text-muted">
+            <Parallax speed={0.05} className="space-y-5 leading-relaxed text-muted">
               <p>{profile.bio}</p>
               <p>
                 Empecé entregando MVPs para startups y terminé diseñando plataformas: gateways con
@@ -54,10 +57,10 @@ export function About() {
                   — filosofía de trabajo
                 </figcaption>
               </figure>
-            </div>
+            </Parallax>
           </Reveal>
 
-          <div className="space-y-4">
+          <Parallax speed={-0.08} className="space-y-4">
             {PILLARS.map((pillar, i) => (
               <Reveal key={pillar.title} delay={i * 0.08}>
                 <Card>
@@ -73,7 +76,7 @@ export function About() {
                 </Card>
               </Reveal>
             ))}
-          </div>
+          </Parallax>
         </div>
       </div>
     </section>

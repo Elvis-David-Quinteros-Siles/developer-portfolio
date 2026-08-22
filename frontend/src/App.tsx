@@ -1,8 +1,8 @@
 import { ApolloProvider } from "@apollo/client";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { MotionConfig } from "framer-motion";
-import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router";
+import { lazy, Suspense, useEffect } from "react";
+import { BrowserRouter, Route, Routes, useLocation, useNavigationType } from "react-router";
 
 import { Footer } from "@/components/layout/Footer";
 import { Navbar } from "@/components/layout/Navbar";
@@ -16,6 +16,22 @@ const ProjectDetail = lazy(() => import("@/pages/ProjectDetail"));
 const Blog = lazy(() => import("@/pages/Blog"));
 const BlogPost = lazy(() => import("@/pages/BlogPost"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+
+/**
+ * Al navegar hacia una ruta nueva (PUSH), vuelve al inicio de la página.
+ * En POP (atrás/adelante) no interviene: el navegador restaura el scroll.
+ */
+function ScrollToTop() {
+  const { pathname, hash } = useLocation();
+  const navigationType = useNavigationType();
+
+  useEffect(() => {
+    if (hash || navigationType === "POP") return;
+    window.scrollTo(0, 0);
+  }, [pathname, hash, navigationType]);
+
+  return null;
+}
 
 function RouteFallback() {
   return (
@@ -33,6 +49,7 @@ export default function App() {
       <ApolloProvider client={apolloClient}>
         <MotionConfig reducedMotion="user">
           <BrowserRouter>
+            <ScrollToTop />
             <a
               href="#main"
               className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-accent focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-bg"
