@@ -21,29 +21,33 @@ namespace: portfolio
 # después obliga a recrear el Deployment.
 
 resources:
-  - namespace.yaml
-  - configmap.yaml
-  - media-pvc.yaml
-  - frontend/deployment.yaml
-  - frontend/service.yaml
-  - gateway/deployment.yaml
-  - gateway/service.yaml
-  - backend-go/deployment.yaml
-  - backend-go/service.yaml
-  - backend-graphql/deployment.yaml
-  - backend-graphql/service.yaml
-  - celery-worker/deployment.yaml
+- namespace.yaml
+- configmap.yaml
+- media-pvc.yaml
+- frontend/deployment.yaml
+- frontend/service.yaml
+- gateway/deployment.yaml
+- gateway/service.yaml
+- backend-go/deployment.yaml
+- backend-go/service.yaml
+- backend-graphql/deployment.yaml
+- backend-graphql/service.yaml
+- celery-worker/deployment.yaml
 
 # Una entrada por imagen construida. celery-worker no aparece: comparte la
 # imagen de backend-graphql, así que esa entrada actualiza ambos Deployments.
 # El CI ejecuta, dentro de k8s/:
 #   kustomize edit set image <name>=<name>:<sha>
 images:
-  - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
-    newTag: latest
-  - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
-    newTag: latest
-  - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-go
-    newTag: latest
-  - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql
-    newTag: latest
+- name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-go
+  newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-go
+  newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
+- name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql
+  newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql
+  newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
+- name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
+  newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
+  newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
+- name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
+  newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
+  newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
