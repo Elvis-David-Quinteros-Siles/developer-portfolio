@@ -1,0 +1,32 @@
+# Configuración NO sensible, equivalente a la parte pública del .env del
+# compose (ver docs/CONTRACTS.md §7). Los valores sensibles viven en el
+# Secret `portfolio-secrets` (ver secrets.example.yaml).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-config
+  labels:
+    app.kubernetes.io/part-of: portfolio
+data:
+  # --- Descubrimiento interno -------------------------------------------------
+  # DNS del clúster. Coinciden con los defaults del código Go, pero se declaran
+  # de forma explícita para que la configuración sea auditable.
+  GO_API_URL: "http://go-api:8080"
+  GRAPHQL_API_URL: "http://graphql-api:8000"
+
+  # --- Go API -----------------------------------------------------------------
+  GIN_MODE: "release"
+  LOG_LEVEL: "info"
+
+  # --- Django -----------------------------------------------------------------
+  DJANGO_DEBUG: "0"
+  # Debe incluir el nombre del Service: las probes HTTP del kubelet usan la IP
+  # del pod como Host, por eso los Deployments sobreescriben la cabecera Host
+  # a `graphql-api` en lugar de abrir ALLOWED_HOSTS a "*".
+  DJANGO_ALLOWED_HOSTS: "graphql-api,localhost,127.0.0.1"
+
+  # --- Gateway ----------------------------------------------------------------
+  # Origen público real de la SPA. Ajústalo a tu dominio antes del primer deploy.
+  CORS_ORIGINS: "http://203.0.113.10"
+  RATE_LIMIT_GLOBAL: "100"
+  RATE_LIMIT_CONTACT: "5"

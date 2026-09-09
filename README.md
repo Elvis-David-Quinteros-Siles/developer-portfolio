@@ -41,6 +41,24 @@ docker compose up -d --build
 
 Solo se necesita Docker. Todo (Go, Python, Node) compila en multi-stage builds.
 
+## Despliegue continuo (GitOps)
+
+Además del compose, la plataforma se despliega en **k3s** con un flujo GitOps
+completo: `git push` → GitHub Actions construye y publica las imágenes en
+**GHCR** → actualiza los tags en `k8s/` con Kustomize → **Argo CD** sincroniza
+el clúster. No hay `kubectl` en el pipeline: GitHub nunca ve el kubeconfig y el
+clúster nunca ve un token de GitHub.
+
+```bash
+git push origin main        # desplegar
+git revert <commit>         # rollback (sin reconstruir nada)
+argocd app get portfolio    # estado
+```
+
+Manifiestos en [`k8s/`](k8s/), Application en [`argocd-app.yaml`](argocd-app.yaml),
+pipeline en [`.github/workflows/ci.yml`](.github/workflows/ci.yml).
+Guía completa: **[docs/gitops.md](docs/gitops.md)**.
+
 ## Documentación
 
 - [Arquitectura y diagrama](docs/ARCHITECTURE.md)
@@ -48,6 +66,7 @@ Solo se necesita Docker. Todo (Go, Python, Node) compila en multi-stage builds.
 - [Diseño de base de datos](docs/DATABASE.md)
 - [Decisiones (ADRs)](docs/adr/)
 - [Guía de despliegue](docs/DEPLOYMENT.md)
+- [Despliegue GitOps con k3s y Argo CD](docs/gitops.md)
 - [Guía de desarrollo](docs/DEVELOPMENT.md)
 
 ## Principios aplicados

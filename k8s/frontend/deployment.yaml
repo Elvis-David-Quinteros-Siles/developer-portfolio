@@ -1,0 +1,64 @@
+# SPA React servida por nginx-unprivileged (uid 101, escucha en 8080).
+# No necesita configuración en runtime: el bundle llama rutas relativas
+# (/api, /graphql, /media) y es el nginx externo quien las enruta al gateway.
+# Lo único configurable (VITE_APP_NAME) es build-arg, no variable de entorno.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  labels:
+    app.kubernetes.io/name: frontend
+    app.kubernetes.io/part-of: portfolio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: frontend
+        app.kubernetes.io/part-of: portfolio
+    spec:
+      securityContext:
+        # UID 101 = usuario nginx de nginxinc/nginx-unprivileged. Se declara
+        # explícitamente porque `runAsNonRoot` solo puede verificarse si el UID
+        # es numérico: si la imagen declarase el USER por nombre, el kubelet
+        # rechazaría el contenedor con "non-numeric user".
+        runAsNonRoot: true
+        runAsUser: 101
+        runAsGroup: 101
+      containers:
+        - name: frontend
+          image: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]

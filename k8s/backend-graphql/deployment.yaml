@@ -1,0 +1,153 @@
+# Django 5 + Strawberry GraphQL. Dueño del esquema (ADR-0003): su entrypoint
+# ejecuta wait_for_db + migrate + seed_demo + ensure_admin antes de gunicorn.
+#
+# Se llama `graphql-api` —no `backend-graphql`— porque ese es el DNS que
+# esperan gateway y go-api (GRAPHQL_API_URL). La carpeta mantiene el nombre del
+# contexto de build.
+#
+# strategy: Recreate — dos motivos: (1) las migraciones del entrypoint no deben
+# solaparse con la instancia anterior, (2) el PVC de media es ReadWriteOnce.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: graphql-api
+  labels:
+    app.kubernetes.io/name: graphql-api
+    app.kubernetes.io/part-of: portfolio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: graphql-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: graphql-api
+        app.kubernetes.io/part-of: portfolio
+    spec:
+      securityContext:
+        # El Dockerfile declara `USER app` — un NOMBRE, que el kubelet no puede
+        # verificar contra `runAsNonRoot`. `adduser --system` le asigna
+        # uid 100 / gid 101, y `chown -R app:app /app` deja ahí los permisos.
+        runAsNonRoot: true
+        runAsUser: 100
+        runAsGroup: 101
+        # Da al PVC de media el grupo del usuario app, para que pueda escribir
+        # los uploads del admin.
+        fsGroup: 101
+      containers:
+        - name: graphql-api
+          image: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: DJANGO_DEBUG
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: DJANGO_DEBUG
+            - name: DJANGO_ALLOWED_HOSTS
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: DJANGO_ALLOWED_HOSTS
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: LOG_LEVEL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: DATABASE_URL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: REDIS_URL
+            - name: DJANGO_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: DJANGO_SECRET_KEY
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: JWT_SECRET
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: INTERNAL_SERVICE_TOKEN
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: ADMIN_USERNAME
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: ADMIN_PASSWORD
+            - name: RECAPTCHA_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: RECAPTCHA_SECRET_KEY
+          volumeMounts:
+            - name: media
+              mountPath: /app/media
+          # Las probes del kubelet usan la IP del pod como cabecera Host y
+          # Django la rechazaría con 400 (ALLOWED_HOSTS). Forzamos el Host al
+          # nombre del Service en lugar de abrir ALLOWED_HOSTS a "*".
+          startupProbe:
+            httpGet:
+              path: /health/
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: graphql-api
+            periodSeconds: 5
+            timeoutSeconds: 5
+            failureThreshold: 36
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: graphql-api
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: graphql-api
+            periodSeconds: 20
+            timeoutSeconds: 5
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 700m
+              memory: 640Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: media
+          persistentVolumeClaim:
+            claimName: portfolio-media

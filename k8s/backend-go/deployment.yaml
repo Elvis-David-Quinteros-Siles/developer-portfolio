@@ -1,0 +1,111 @@
+# Go REST API (Gin, Clean Architecture). El Deployment y el Service se llaman
+# `go-api` —no `backend-go`— porque ese nombre es el DNS que esperan por
+# defecto el gateway (GO_API_URL) y el propio compose. La carpeta conserva el
+# nombre `backend-go` porque es el contexto de build de la imagen.
+#
+# Imagen distroless sin shell: probes httpGet.
+#   /healthz → liveness
+#   /readyz  → readiness (PostgreSQL alcanzable)
+# El pool de PostgreSQL es perezoso: si la DB aún no está lista el pod arranca
+# y se queda NotReady, sin CrashLoop. Eso sustituye al `depends_on` del compose.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: go-api
+  labels:
+    app.kubernetes.io/name: go-api
+    app.kubernetes.io/part-of: portfolio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: go-api
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: go-api
+        app.kubernetes.io/part-of: portfolio
+    spec:
+      securityContext:
+        # UID de nonroot en gcr.io/distroless/static-debian12:nonroot.
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: go-api
+          image: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-go:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: GIN_MODE
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: GIN_MODE
+            - name: GRAPHQL_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: GRAPHQL_API_URL
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: LOG_LEVEL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: DATABASE_URL
+            - name: INTERNAL_SERVICE_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: INTERNAL_SERVICE_TOKEN
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: JWT_SECRET
+            - name: ADMIN_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: ADMIN_USERNAME
+            - name: ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: ADMIN_PASSWORD
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 48Mi
+            limits:
+              cpu: 400m
+              memory: 192Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]

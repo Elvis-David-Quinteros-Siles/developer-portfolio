@@ -1,0 +1,16 @@
+# ClusterIP: solo alcanzable desde dentro del clúster (lo consume el gateway).
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-api
+  labels:
+    app.kubernetes.io/name: go-api
+    app.kubernetes.io/part-of: portfolio
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: go-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

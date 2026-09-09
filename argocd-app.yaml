@@ -1,0 +1,55 @@
+# ==============================================================================
+# Argo CD Application: el único objeto que se aplica a mano. A partir de aquí,
+# el estado del clúster lo determina el contenido de k8s/ en la rama main.
+#
+#   kubectl apply -f argocd-app.yaml
+#
+# Repo público: no hace falta registrar credenciales. Si algún día pasa a
+# privado, ver docs/gitops.md §6 (`argocd repo add` con PAT).
+# ==============================================================================
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio
+  namespace: argocd
+  # Evita que Argo CD borre la Application (y con ella todo lo desplegado) si
+  # alguien hace `kubectl delete -f argocd-app.yaml` sin querer.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+
+  source:
+    repoURL: https://github.com/Elvis-David-Quinteros-Siles/developer-portfolio.git
+    targetRevision: main
+    path: k8s
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: portfolio
+
+  syncPolicy:
+    automated:
+      # Borra del clúster lo que se elimine del repo.
+      prune: true
+      # Revierte cambios hechos a mano con kubectl: el repo es la verdad.
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      # Aplica en orden lógico (Namespace y ConfigMap antes que los Deployments).
+      - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 3m
+
+  # El PVC de media crece con los uploads: su `resources.requests.storage`
+  # observado en el clúster no debe marcar la Application como OutOfSync.
+  ignoreDifferences:
+    - group: ""
+      kind: PersistentVolumeClaim
+      name: portfolio-media
+      jsonPointers:
+        - /spec/resources/requests/storage

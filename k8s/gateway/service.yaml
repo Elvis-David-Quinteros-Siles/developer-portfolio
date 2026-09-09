@@ -1,0 +1,19 @@
+# NodePort 30081: el nginx externo enruta /api/, /graphql y /media/ a
+# http://127.0.0.1:30081. La SPA usa rutas relativas, así que el navegador
+# nunca ve este puerto directamente (mismo origen, sin CORS cross-site).
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/part-of: portfolio
+spec:
+  type: NodePort
+  selector:
+    app.kubernetes.io/name: gateway
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http
+      nodePort: 30081

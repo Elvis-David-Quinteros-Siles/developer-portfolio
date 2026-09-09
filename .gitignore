@@ -20,3 +20,7 @@ pgdata/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Kubernetes: secretos reales (usa k8s/secrets.example.yaml como plantilla)
+k8s/secrets.yaml
+k8s/**/secrets.yaml

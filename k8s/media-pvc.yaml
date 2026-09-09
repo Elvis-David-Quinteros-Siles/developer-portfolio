@@ -1,0 +1,20 @@
+# Equivalente del volumen `media` del compose: uploads de Django servidos vía
+# gateway. Lo montan graphql-api (escritor, admin) y celery-worker.
+#
+# ReadWriteOnce sobre la StorageClass por defecto de k3s (local-path) es
+# suficiente porque el clúster es de un solo nodo: ambos pods se programan en
+# el mismo nodo y el kubelet permite montar el mismo volumen RWO en varios pods
+# del mismo nodo. Al pasar a multi-nodo hay que migrar a RWX (NFS/Longhorn) o,
+# mejor, a object storage detrás de un adapter (ver docs/adr/0006).
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: portfolio-media
+  labels:
+    app.kubernetes.io/part-of: portfolio
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi

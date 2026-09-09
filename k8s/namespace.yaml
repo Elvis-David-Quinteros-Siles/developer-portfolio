@@ -1,0 +1,9 @@
+# Namespace único de la plataforma. Argo CD también lo crearía por
+# CreateNamespace=true, pero lo declaramos para que `kubectl apply -k k8s/`
+# funcione igual sin Argo CD.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: portfolio
+  labels:
+    app.kubernetes.io/part-of: portfolio

@@ -1,0 +1,108 @@
+# API Gateway (Go, stdlib). Imagen distroless sin shell: las probes son
+# obligatoriamente httpGet, nunca exec.
+#   /healthz → liveness (proceso vivo)
+#   /readyz  → readiness (Redis alcanzable)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  labels:
+    app.kubernetes.io/name: gateway
+    app.kubernetes.io/part-of: portfolio
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: gateway
+        app.kubernetes.io/part-of: portfolio
+    spec:
+      securityContext:
+        # El Dockerfile declara `USER nonroot:nonroot` — un NOMBRE. Sin
+        # `runAsUser` numérico el kubelet no puede verificar que no es root y
+        # falla con "image has non-numeric user (nonroot)". 65532 es el UID de
+        # nonroot en gcr.io/distroless/static-debian12:nonroot.
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+      containers:
+        - name: gateway
+          image: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: PORT
+              value: "8080"
+            - name: GO_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: GO_API_URL
+            - name: GRAPHQL_API_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: GRAPHQL_API_URL
+            - name: CORS_ORIGINS
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: CORS_ORIGINS
+            - name: RATE_LIMIT_GLOBAL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: RATE_LIMIT_GLOBAL
+            - name: RATE_LIMIT_CONTACT
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: RATE_LIMIT_CONTACT
+            - name: LOG_LEVEL
+              valueFrom:
+                configMapKeyRef:
+                  name: portfolio-config
+                  key: LOG_LEVEL
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: REDIS_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: JWT_SECRET
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 32Mi
+            limits:
+              cpu: 300m
+              memory: 128Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
