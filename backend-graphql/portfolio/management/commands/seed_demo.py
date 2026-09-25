@@ -76,8 +76,8 @@ class Command(BaseCommand):
             ),
             photo_url="/media/seed/profile/elvis-quinteros.webp",
             cv_url="/media/seed/profile/cv-elvis-quinteros.pdf",
-            github_url="https://github.com/elvisquinteros",
-            linkedin_url="https://www.linkedin.com/in/elvis-quinteros",
+            github_url="https://github.com/10ElvisDqs",
+            linkedin_url="https://www.linkedin.com/in/elvis-david-quinteros-siles-2939a6225",
             email="dquinteros630@gmail.com",
             location="Santa Cruz de la Sierra, Bolivia",
             philosophy=(

@@ -21,8 +21,8 @@ export const fallbackProfile: Profile = {
   bio: "Ingeniero de software enfocado en sistemas backend distribuidos, arquitectura limpia y plataformas cloud-native. Diseño y construyo servicios en Go y Python que escalan, se observan y se despliegan solos. Me obsesiona la calidad: contratos claros, tests que dan confianza y pipelines que no mienten.",
   photo_url: null,
   cv_url: "/cv.pdf",
-  github_url: "https://github.com/elvisquinteros",
-  linkedin_url: "https://www.linkedin.com/in/elvisquinteros",
+  github_url: "https://github.com/10ElvisDqs",
+  linkedin_url: "https://www.linkedin.com/in/elvis-david-quinteros-siles-2939a6225",
   email: "dquinteros630@gmail.com",
   location: "La Paz, Bolivia",
   philosophy:

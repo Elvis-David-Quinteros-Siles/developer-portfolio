@@ -1,8 +1,8 @@
 /* TEAM */
   Developer & Architect: Elvis Quinteros
   Contact: dquinteros630 [at] gmail.com
-  GitHub: https://github.com/elvisquinteros
-  LinkedIn: https://www.linkedin.com/in/elvisquinteros
+  GitHub: https://github.com/10ElvisDqs
+  LinkedIn: https://www.linkedin.com/in/elvis-david-quinteros-siles-2939a6225
   Location: La Paz, Bolivia
 
 /* SITE */
