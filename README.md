@@ -41,6 +41,10 @@ docker compose up -d --build
 
 Solo se necesita Docker. Todo (Go, Python, Node) compila en multi-stage builds.
 
+¿Primera vez, o desplegando en un servidor? **[docs/RUNBOOK.md](docs/RUNBOOK.md)**
+lleva de cero a funcionando paso a paso, con una comprobación tras cada paso y
+los fallos típicos resueltos.
+
 ## Despliegue continuo (GitOps)
 
 Además del compose, la plataforma se despliega en **k3s** con un flujo GitOps
@@ -61,6 +65,7 @@ Guía completa: **[docs/gitops.md](docs/gitops.md)**.
 
 ## Documentación
 
+- [Cómo hacerlo correr](docs/RUNBOOK.md) — empieza aquí
 - [Arquitectura y diagrama](docs/ARCHITECTURE.md)
 - [Contratos entre servicios](docs/CONTRACTS.md) — fuente de verdad
 - [Diseño de base de datos](docs/DATABASE.md)

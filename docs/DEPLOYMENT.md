@@ -2,6 +2,8 @@
 
 ## Requisitos
 - Docker Engine 24+ con Compose v2. Nada más: todos los builds son multi-stage.
+- Para el despliegue con Postgres externo, Compose **v2.24+** (usa las etiquetas
+  `!override`). Compruébalo con `docker compose version`.
 
 ## Producción en un host (VPS)
 
@@ -36,6 +38,207 @@ docker compose pull && docker compose up -d --build   # actualizar
 ### Backups
 Volúmenes con estado: `pgdata` (crítico), `media` (uploads), `redisdata`
 (regenerable). Programa `pg_dump` + copia de `media` fuera del host.
+
+## PostgreSQL externo (contenedor ya existente en el servidor)
+
+El compose base trae su propio PostgreSQL, cómodo en desarrollo. En un servidor
+que **ya tiene** un contenedor de PostgreSQL conviene reutilizarlo: una sola
+instancia que respaldar, monitorear y actualizar. Dos instancias significan dos
+rutinas de backup, y la que se olvida es la que se pierde.
+
+`docker-compose.prod.yml` hace ese cambio: deja el `postgres` del proyecto tras
+un perfil que nunca se activa, quita la espera a su health check y engancha los
+tres servicios que hablan con la base (`go-api`, `graphql-api`, `celery-worker`)
+a una red compartida con el contenedor existente.
+
+> Los `make x` de esta guía son atajos. Si no tienes `make` (habitual en
+> Windows), cada uno equivale a un comando directo: `make db-bootstrap` →
+> `sh scripts/db-bootstrap.sh`, y `make prod-*` →
+> `docker compose -f docker-compose.yml -f docker-compose.prod.yml <acción>`.
+> Todos están en el [RUNBOOK](RUNBOOK.md#6-chuleta).
+
+### Puesta en marcha
+
+```bash
+# 1. Configura el .env con los datos de la base que quieres usar
+cp .env.example .env
+#    POSTGRES_DB / POSTGRES_USER / POSTGRES_PASSWORD  → credenciales a crear
+#    PG_CONTAINER=<nombre de tu contenedor de PostgreSQL>
+#    DATABASE_URL=postgres://<user>:<pass>@<PG_CONTAINER>:5432/<db>?sslmode=disable
+#    NGINX_PORT=8081   (si ya tienes un Nginx en el 80; ver § "Detrás de tu Nginx")
+#    REGISTRY / IMAGE_PREFIX → donde publica el pipeline
+
+# 2. Crea rol, base, pgcrypto, permisos y la red compartida (idempotente)
+make db-bootstrap
+
+# 3. Despliega
+IMAGE_TAG=<sha> make prod-up
+make prod-ps            # todo debe quedar healthy
+```
+
+`make db-bootstrap` (script `scripts/db-bootstrap.sh`) hace exactamente esto,
+todo repetible sin efectos secundarios:
+
+1. Crea el rol de la aplicación, o sincroniza su contraseña con el `.env`.
+2. Crea la base con ese rol como dueño (si ya existe, no toca su contenido).
+3. Habilita `pgcrypto` y le da la propiedad del schema `public` — **necesario en
+   PostgreSQL 15+**, donde el rol público ya no puede crear objetos y `migrate`
+   fallaría con `permission denied`.
+4. Crea la red Docker compartida y engancha tu contenedor de PostgreSQL.
+5. Verifica el login por TCP, la misma ruta de autenticación que usarán los
+   contenedores de la aplicación.
+
+No crea tablas: de eso se encarga el entrypoint de Django, que en cada arranque
+ejecuta `migrate`, `seed_demo` y `ensure_admin`.
+
+### Si tu PostgreSQL no está en una red de Docker
+
+El script crea la red y conecta el contenedor por ti. Si prefieres hacerlo a
+mano, son dos comandos:
+
+```bash
+docker network create portfolio-dbnet
+docker network connect portfolio-dbnet <tu-contenedor-postgres>
+```
+
+Si en cambio tu PostgreSQL está publicado en el host (o es un servicio
+gestionado), borra el bloque `networks.dbnet` de `docker-compose.prod.yml`, quita
+`dbnet` de los tres servicios y apunta `DATABASE_URL` al host — con
+`extra_hosts: ["host.docker.internal:host-gateway"]` en cada uno de esos
+servicios si es el propio host. El archivo lleva esa alternativa comentada.
+
+### Volver al Postgres embebido
+
+El servicio sigue definido, solo desactivado por perfil:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml \
+  --profile embedded-db up -d
+```
+
+### Detrás de tu Nginx del servidor
+
+El Nginx del proyecto es el router del stack (`/` → SPA, `/api/` + `/graphql` +
+`/media/` → gateway, cabeceras de seguridad, `X-Request-ID`), no un servidor de
+estáticos. Se encadena detrás del Nginx del servidor, que se queda con TLS y los
+dominios: pon `NGINX_PORT=8081` en el `.env` y delega todo en él.
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name tudominio.com;
+    # ... certificados ...
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host              $host;
+        proxy_set_header X-Real-IP         $remote_addr;
+        proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+Si tu Nginx también es un contenedor, conéctalo a la red `edge` del proyecto y
+usa `proxy_pass http://portfolio-nginx-1:80` sin publicar ningún puerto.
+
+### Backups con base externa
+
+`make backup` apunta al contenedor del compose y ya no aplica. Con base externa:
+
+```bash
+docker exec -t <tu-contenedor-postgres> \
+  pg_dump -U portfolio portfolio > backups/portfolio-$(date +%Y%m%d).sql
+```
+
+Sigue haciendo falta respaldar el volumen `media` (uploads), que continúa dentro
+del compose.
+
+## CI/CD con Jenkins
+
+`Jenkinsfile` cubre el ciclo completo para el despliegue con Compose. La idea
+central: **el artefacto que se prueba es el que se despliega**. Las imágenes se
+etiquetan con el SHA del commit, pasan el smoke test, se publican y el servidor
+las descarga — nunca compila nada.
+
+| Etapa | Qué hace | Qué corta el pipeline |
+|-------|----------|----------------------|
+| Preparar | SHA corto como `IMAGE_TAG`, `.env` efímero con secretos aleatorios | — |
+| Build de imágenes | `docker compose build --pull` | `go vet`/`go test` (Go) y eslint/`tsc` (frontend) corren **dentro** de los Dockerfiles |
+| Verificar Django | `manage.py check` y `makemigrations --check` | drift entre modelos y migraciones |
+| Smoke end-to-end | levanta el stack completo y corre `scripts/smoke-test.sh` | cualquier ruta rota, incluido el POST de contacto Go → Django → PostgreSQL → Celery |
+| Publicar imágenes | `docker tag` + `docker push` (solo en `main`) | — |
+| Desplegar | `scripts/deploy.sh` en el servidor (solo en `main`) | smoke test contra producción |
+
+Las puertas de calidad viven en los Dockerfiles, no en el pipeline: el agente de
+Jenkins solo necesita Docker, y `docker compose up --build` en cualquier máquina
+aplica las mismas comprobaciones.
+
+### Configuración del job
+
+1. **Job** de tipo *Pipeline* → *Pipeline script from SCM*, apuntando a este
+   repositorio (el checkout es implícito).
+2. **Agente Linux** con Docker Engine, Compose v2.24+, `git` y `sh`. No hace
+   falta Node ni Go.
+3. **Plugins**: *Pipeline*, *Credentials Binding*, *Timestamper* y — solo si
+   despliegas por SSH — *SSH Agent*. Si falta alguno, el pipeline no arranca y el
+   error apunta a la directiva que lo usa.
+4. **Credenciales** en Jenkins:
+   - `portfolio-registry` (*Username/Password*) — para publicar las imágenes.
+     En GHCR, el usuario es tu handle y la contraseña un PAT con `write:packages`.
+   - `portfolio-deploy-key` (*SSH private key*) — solo si Jenkins no corre en el
+     servidor.
+5. **Parámetros** (se ajustan en cada ejecución, con estos valores por defecto):
+
+   | Parámetro | Default | Para qué |
+   |-----------|---------|----------|
+   | `REGISTRY` | `ghcr.io/elvis-david-quinteros-siles` | registry y namespace de las imágenes (minúsculas: GHCR rechaza mayúsculas) |
+   | `DEPLOY_TARGET` | `local` | `local` si Jenkins está en el servidor; si no, `usuario@host` |
+   | `PROJECT_DIR` | `/opt/portfolio` | ruta del checkout en el servidor |
+   | `PUSH_IMAGES` | `true` | publicar en el registry |
+   | `DEPLOY` | `true` | desplegar tras publicar |
+
+6. **En el servidor**, una vez: clonar el repo en `PROJECT_DIR`, crear el `.env`
+   con los secretos reales, `make db-bootstrap` y `docker login <registry>` (el
+   `docker pull` del deploy usa esa sesión; Jenkins no le pasa credenciales).
+
+Los secretos de producción nunca pasan por Jenkins: viven en el `.env` del
+servidor. El pipeline genera su propio `.env` desechable con
+`scripts/ci-env.sh` — valores aleatorios en cada build y `NGINX_PORT=0`, para
+que el stack de CI no choque con el de producción aunque compartan el host. Por
+la misma razón cada build usa un proyecto de Compose aislado
+(`portfolio-ci-<nº>`), pasado con `-p` en todos los comandos.
+
+### Despliegue
+
+`scripts/deploy.sh` corre en el servidor (lo invoca Jenkins, o tú a mano):
+
+```bash
+cd /opt/portfolio
+git fetch --prune origin && git checkout -q <sha>
+IMAGE_TAG=<sha> sh scripts/deploy.sh
+```
+
+Descarga las imágenes, levanta el stack esperando a que todo quede `healthy`,
+corre el smoke test y guarda el tag desplegado en `.deployed-tag`.
+
+**No hay rollback automático, a propósito.** Cuando el smoke test falla, el
+esquema ya avanzó (Django migra al arrancar) y volver al código anterior no
+siempre es seguro. El script imprime el comando exacto de rollback y volca los
+logs para decidir con datos:
+
+```bash
+IMAGE_TAG=<tag-anterior> sh scripts/deploy.sh
+```
+
+### Relación con los workflows de GitHub Actions
+
+Conviven sin pisarse, porque despliegan a sitios distintos:
+
+- `.github/workflows/*.yml` por servicio: puerta de calidad en pull request.
+- `.github/workflows/ci.yml`: publica en GHCR y actualiza los tags de `k8s/`
+  para que Argo CD sincronice — la ruta **Kubernetes** (`docs/gitops.md`).
+- `Jenkinsfile`: la ruta **Compose sobre un servidor**, la que describe esta
+  guía. Si solo usas Jenkins, `ci.yml` se puede desactivar.
 
 ## Kubernetes (mapa de migración — ADR-0006)
 

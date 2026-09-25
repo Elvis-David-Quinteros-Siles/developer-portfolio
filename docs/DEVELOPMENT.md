@@ -1,5 +1,9 @@
 # Guía de Desarrollo
 
+Esta guía asume el stack ya levantado y se centra en el día a día del código.
+Para arrancarlo por primera vez o resolver un fallo de arranque:
+**[RUNBOOK.md](RUNBOOK.md)**.
+
 ## Arranque
 
 ```bash
