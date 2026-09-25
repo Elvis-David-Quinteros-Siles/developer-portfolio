@@ -136,6 +136,12 @@ class Command(BaseCommand):
                 ("Grafana", "simple-icons:grafana", 4, "4.0", "Dashboards y correlación métricas/logs/trazas"),
                 ("OpenTelemetry", "simple-icons:opentelemetry", 3, "2.5", "Trazabilidad distribuida extremo a extremo"),
             ],
+            ("IA & Automatización", "ia-automatizacion", 7): [
+                ("IA Generativa / LLMs", "lucide:brain", 4, "2.0", "Integración de LLMs (Claude, GPT), prompt engineering y RAG"),
+                ("Automatización", "lucide:workflow", 4, "4.0", "Automatización de procesos y flujos de trabajo end-to-end"),
+                ("n8n", "simple-icons:n8n", 4, "2.0", "Workflows automatizados, integraciones API y agentes IA"),
+                ("Ollama", "simple-icons:ollama", 3, "1.5", "LLMs locales self-hosted, embeddings y despliegues privados"),
+            ],
         }
         for (cat_name, cat_slug, order), skills in data.items():
             category, was_created = _upsert(

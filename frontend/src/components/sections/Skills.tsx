@@ -3,8 +3,10 @@ import { useState } from "react";
 import {
   Activity,
   Atom,
+  Bot,
   Boxes,
   Braces,
+  Brain,
   Cloud,
   Code2,
   Container,
@@ -54,6 +56,10 @@ const ICON_MAP: Record<string, LucideIcon> = {
   shapes: Shapes,
   radio: Radio,
   boxes: Boxes,
+  brain: Brain,
+  workflow: Workflow,
+  n8n: Share2,
+  ollama: Bot,
 };
 
 function skillIcon(iconSlug: string): LucideIcon {

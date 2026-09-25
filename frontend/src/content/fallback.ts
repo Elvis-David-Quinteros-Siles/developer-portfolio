@@ -267,6 +267,50 @@ export const fallbackSkillCategories: SkillCategory[] = [
       },
     ],
   },
+  {
+    id: "cat-ia",
+    name: "IA & Automatización",
+    slug: "ia-automatizacion",
+    display_order: 7,
+    skills: [
+      {
+        id: "sk-ia",
+        name: "IA Generativa / LLMs",
+        icon: "lucide:brain",
+        level: 4,
+        years: 2,
+        description: "Integración de LLMs (Claude, GPT), prompt engineering y RAG.",
+        display_order: 1,
+      },
+      {
+        id: "sk-automation",
+        name: "Automatización",
+        icon: "lucide:workflow",
+        level: 4,
+        years: 4,
+        description: "Automatización de procesos y flujos de trabajo end-to-end.",
+        display_order: 2,
+      },
+      {
+        id: "sk-n8n",
+        name: "n8n",
+        icon: "simple-icons:n8n",
+        level: 4,
+        years: 2,
+        description: "Workflows automatizados, integraciones API y agentes IA.",
+        display_order: 3,
+      },
+      {
+        id: "sk-ollama",
+        name: "Ollama",
+        icon: "simple-icons:ollama",
+        level: 3,
+        years: 1,
+        description: "LLMs locales self-hosted, embeddings y despliegues privados.",
+        display_order: 4,
+      },
+    ],
+  },
 ];
 
 export const fallbackProjects: Project[] = [
