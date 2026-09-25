@@ -254,7 +254,17 @@ sh scripts/deploy.sh
         }
         cleanup {
             sh '''
-                docker compose -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans --rmi local || true
+                docker compose -p "$COMPOSE_PROJECT_NAME" down -v --remove-orphans || true
+                # Nada de `--rmi local`: compose borra la primera etiqueta por
+                # orden alfabético de la imagen de cada contenedor, y tras un
+                # despliegue local-images esa puede ser la de producción
+                # (portfolio-celery-worker:<sha> va antes que portfolio-ci-N-…).
+                # Quitar la etiqueta de CI por nombre solo desetiqueta si la
+                # imagen tiene otras, y la borra si no.
+                for service in $SERVICES celery-worker; do
+                    docker image rm "${COMPOSE_PROJECT_NAME}-${service}" >/dev/null 2>&1 || true
+                done
+                docker image prune -f --filter "label=com.docker.compose.project=${COMPOSE_PROJECT_NAME}" >/dev/null 2>&1 || true
                 registry_host=$(printf '%s' "${REGISTRY:-}" | cut -d/ -f1)
                 if [ -n "$registry_host" ]; then docker logout "$registry_host" >/dev/null 2>&1 || true; fi
                 rm -f .env .deploy-remote.sh
