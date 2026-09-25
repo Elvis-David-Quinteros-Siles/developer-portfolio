@@ -38,6 +38,11 @@ pipeline {
             defaultValue: 'ghcr.io/elvis-david-quinteros-siles',
             description: 'Registry y namespace donde se publican las imágenes (en minúsculas: GHCR rechaza mayúsculas).'
         )
+        choice(
+            name: 'DEPLOY_MODE',
+            choices: ['local-images', 'registry'],
+            description: 'local-images: Jenkins corre en el servidor y despliega las imágenes que acaba de probar, sin registry (scripts/deploy-local.sh). registry: el servidor las descarga del registry (scripts/deploy.sh).'
+        )
         string(
             name: 'DEPLOY_TARGET',
             defaultValue: 'local',
@@ -45,12 +50,12 @@ pipeline {
         )
         string(
             name: 'PROJECT_DIR',
-            defaultValue: '/opt/portfolio',
-            description: 'Ruta del checkout del repositorio en el servidor.'
+            defaultValue: '/home/ubuntu/developer-portfolio',
+            description: 'Ruta del checkout del repositorio en el servidor. En modo local-images debe estar montada en el contenedor de Jenkins en la misma ruta.'
         )
         booleanParam(
             name: 'PUSH_IMAGES',
-            defaultValue: true,
+            defaultValue: false,
             description: 'Publicar las imágenes en el registry (solo tiene efecto en main).'
         )
         booleanParam(
@@ -152,18 +157,23 @@ pipeline {
                     set -eu
                     dc() { docker compose -p "$COMPOSE_PROJECT_NAME" "$@"; }
                     dc up -d --wait --wait-timeout 300
-                    # NGINX_PORT=0: Docker asignó un puerto libre, lo resolvemos.
-                    port=$(dc port nginx 80 | head -n1 | sed 's/.*://')
+                    # El smoke test corre en un contenedor que comparte la red
+                    # del nginx de CI: `localhost` es ese nginx sea cual sea el
+                    # agente. Un puerto publicado no sirve si el agente es a su
+                    # vez un contenedor (su localhost no es el del host).
                     # `localhost` y no 127.0.0.1: el Host llega hasta Django y
                     # DJANGO_ALLOWED_HOSTS valida el dominio (sin puerto).
-                    sh scripts/smoke-test.sh "http://localhost:${port}"
+                    nginx_id=$(dc ps -q nginx)
+                    docker run --rm -i --network "container:${nginx_id}" \
+                        --entrypoint sh curlimages/curl:8.10.1 \
+                        -s http://localhost < scripts/smoke-test.sh
                 '''
             }
         }
 
         stage('Publicar imágenes') {
             when {
-                expression { env.IS_MAIN == 'true' && params.PUSH_IMAGES }
+                expression { env.IS_MAIN == 'true' && params.PUSH_IMAGES && params.DEPLOY_MODE == 'registry' }
             }
             steps {
                 withCredentials([usernamePassword(
@@ -194,6 +204,18 @@ pipeline {
             }
             steps {
                 script {
+                    if (params.DEPLOY_MODE == 'local-images') {
+                        // Corre antes del cleanup, que borra las imágenes del
+                        // proyecto de CI: los tags nuevos las mantienen vivas.
+                        sh """
+                            PROJECT_DIR='${params.PROJECT_DIR}' \\
+                            GIT_SHA='${env.GIT_SHA}' \\
+                            IMAGE_TAG='${env.IMAGE_TAG}' \\
+                            CI_PROJECT='${env.COMPOSE_PROJECT_NAME}' \\
+                            sh scripts/deploy-local.sh
+                        """
+                        return
+                    }
                     // Un parámetro vacío se trata como `local`: intentar un ssh a
                     // "" daría un error mucho más difícil de leer.
                     def target = (params.DEPLOY_TARGET ?: 'local').trim()

@@ -230,6 +230,30 @@ logs para decidir con datos:
 IMAGE_TAG=<tag-anterior> sh scripts/deploy.sh
 ```
 
+### Modo `local-images` (Jenkins en el mismo servidor, sin registry)
+
+Es el `DEPLOY_MODE` por defecto. Si Jenkins corre en el servidor de producción,
+las imágenes que construyó y probó ya están en su daemon de Docker: publicarlas
+en un registry solo para descargarlas de vuelta no aporta nada.
+`scripts/deploy-local.sh` las re-etiqueta como `portfolio-<servicio>:<sha>` y
+`:latest`, avanza el clon del servidor (`PROJECT_DIR`) a ese commit (solo
+fast-forward), recrea el stack con `--no-build` y corre el smoke test contra
+`SMOKE_URL` (por defecto `https://edqs.online`).
+
+Requisitos cuando Jenkins es un contenedor que usa el socket del host:
+
+- Cliente de Docker con Compose dentro del contenedor de Jenkins.
+- `PROJECT_DIR` montado en el contenedor **en la misma ruta** que en el host.
+- `/var/jenkins_home` en el host como enlace al volumen de Jenkins: el daemon
+  resuelve los bind mounts del compose de CI (p. ej. `docker/postgres/init`)
+  con rutas del host.
+
+Rollback sin recompilar, con un tag desplegado antes:
+
+```bash
+cd /home/ubuntu/developer-portfolio && IMAGE_TAG=<tag-anterior> sh scripts/deploy-local.sh
+```
+
 ### Relación con los workflows de GitHub Actions
 
 Conviven sin pisarse, porque despliegan a sitios distintos:
