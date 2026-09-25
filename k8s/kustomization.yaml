@@ -44,10 +44,10 @@ images:
   newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
 - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql
   newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-backend-graphql
-  newTag: dd00f028da7e4c20e28f0b79756a473134c3ca7d
+  newTag: 33a9b6d8bff16838101a6198822e0db72104c167
 - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
   newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
-  newTag: dd00f028da7e4c20e28f0b79756a473134c3ca7d
+  newTag: 33a9b6d8bff16838101a6198822e0db72104c167
 - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
   newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
   newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
