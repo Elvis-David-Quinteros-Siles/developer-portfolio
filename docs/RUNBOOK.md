@@ -343,6 +343,11 @@ Los atajos `make prod-*` equivalen a
 `docker compose -f docker-compose.yml -f docker-compose.prod.yml <acción>`; usa el
 comando largo si no tienes `make`.
 
+Los binarios de `frontend/public/` (logo, favicons, tarjeta OpenGraph, imágenes
+del showcase) no los produce el build: se generan a mano con `npm run logo`,
+`npm run og` y `npm run showcase`, y se versionan. Ver
+[DEVELOPMENT.md § Assets estáticos generados](DEVELOPMENT.md#assets-estáticos-generados).
+
 Documentación relacionada: [DEVELOPMENT.md](DEVELOPMENT.md) para trabajar en el
 código · [DEPLOYMENT.md](DEPLOYMENT.md) para el diseño del despliegue y Jenkins ·
 [ARCHITECTURE.md](ARCHITECTURE.md) para entender por qué el sistema está partido

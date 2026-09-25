@@ -39,6 +39,32 @@ cd frontend && npm install && npm run dev
 # Vite proxy /api y /graphql → localhost:80 (compose levantado)
 ```
 
+Comprobaciones antes de subir (las mismas que aplica el build de la imagen:
+la stage `lint` del Dockerfile bloquea el build si fallan):
+```bash
+npm run lint && npm run typecheck
+```
+
+#### Assets estáticos generados
+
+Tres scripts producen los binarios de `public/`. **No se ejecutan en el build**:
+son `one-off`, se corren a mano y el resultado se versiona. Todos usan `sharp`.
+
+| Comando | Genera | Cuándo ejecutarlo |
+|---|---|---|
+| `npm run logo` | `logo-mark.png`, `logo-edqs.png`, `favicon.png`, `apple-touch-icon.png` | al cambiar `brand/logo-source.png` |
+| `npm run og` | `og.png` (1200×630, tarjeta al compartir) | al cambiar el isotipo, el nombre o el headline |
+| `npm run showcase` | `public/showcase/*.webp` | rara vez; descarga fotos de prueba, requiere red |
+
+`generate-logo.mjs` recorta el isotipo y el lockup del PNG de marca y les
+devuelve el canal alfa: como el arte es color sobre negro ya viene
+premultiplicado, así que el canal más brillante da la cobertura y el color se
+des-premultiplica. Sin eso, el fondo horneado del original (`#030715`) se vería
+como un recuadro sobre el fondo del sitio (`#0a0a0f`).
+
+El isotipo se compone dentro de `og.png`, así que **`npm run og` va después de
+`npm run logo`** si cambió la marca.
+
 ### backend-go / gateway
 Sin Go local: `docker compose up -d --build go-api` tras cada cambio, o
 instala Go 1.23 y `go run ./cmd/api`. Tests: `docker build` los ejecuta en el
