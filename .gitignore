@@ -15,6 +15,10 @@ bin/
 media/
 pgdata/
 
+# Estado local del despliegue (scripts/deploy.sh: último tag desplegado)
+.deployed-tag
+backups/
+
 # IDE / SO
 .idea/
 .vscode/

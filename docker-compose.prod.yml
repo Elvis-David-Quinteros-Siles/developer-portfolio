@@ -1,0 +1,67 @@
+# ==============================================================================
+# Override de producción. Dos diferencias con el compose base:
+#
+#   1. PostgreSQL es EXTERNO: se usa el contenedor que ya corre en el servidor.
+#      El `postgres` del proyecto queda tras un perfil que nunca se activa.
+#   2. Las imágenes vienen del registry: el servidor NO construye nada, despliega
+#      exactamente el artefacto que el pipeline probó.
+#
+# Uso:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+#   (o `make prod-up`, que ya encadena los dos archivos)
+#
+# Requiere Compose v2.24+ por las etiquetas `!override` (docker compose version).
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------- deshabilitado
+  # El Postgres embebido no se levanta: su perfil no se activa nunca en
+  # producción. Sigue disponible para desarrollo local, donde este archivo no se
+  # usa, y se puede rescatar con `--profile embedded-db` si hiciera falta.
+  postgres:
+    profiles: ["embedded-db"]
+
+  # ------------------------------------------------------- imágenes del registry
+  nginx:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-nginx:${IMAGE_TAG:-latest}
+
+  frontend:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-frontend:${IMAGE_TAG:-latest}
+
+  gateway:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-gateway:${IMAGE_TAG:-latest}
+
+  # ------------------------------------------- consumidores de la base de datos
+  # `depends_on` se reemplaza entero (no se fusiona) para quitar la espera al
+  # servicio `postgres`, que ya no existe en este despliegue. La salud de la base
+  # externa la comprueba el propio contenedor: el entrypoint de Django hace
+  # `wait_for_db` y Go reintenta la conexión al arrancar.
+  go-api:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-go-api:${IMAGE_TAG:-latest}
+    depends_on: !override
+      graphql-api:
+        condition: service_healthy # garantiza esquema migrado (ADR-0003)
+    networks: [internal, data, dbnet]
+
+  graphql-api:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-graphql-api:${IMAGE_TAG:-latest}
+    depends_on: !override
+      redis:
+        condition: service_healthy
+    networks: [internal, data, dbnet]
+
+  # Comparte imagen con graphql-api: mismo contexto de build, mismo artefacto.
+  celery-worker:
+    image: ${REGISTRY}/${IMAGE_PREFIX}-graphql-api:${IMAGE_TAG:-latest}
+    networks: [internal, data, dbnet]
+
+networks:
+  # Red ya existente en el servidor, compartida con el contenedor de PostgreSQL.
+  # `scripts/db-bootstrap.sh` la crea y engancha el contenedor si hace falta.
+  # Alternativa sin red compartida (Postgres publicado en el host): borra este
+  # bloque, quita `dbnet` de los tres servicios, apunta DATABASE_URL a
+  # `host.docker.internal` y añade a cada uno:
+  #   extra_hosts: ["host.docker.internal:host-gateway"]
+  dbnet:
+    name: ${EXTERNAL_DB_NETWORK:-portfolio-dbnet}
+    external: true
