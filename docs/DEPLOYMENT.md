@@ -157,8 +157,10 @@ del compose.
 
 `Jenkinsfile` cubre el ciclo completo para el despliegue con Compose. La idea
 central: **el artefacto que se prueba es el que se despliega**. Las imágenes se
-etiquetan con el SHA del commit, pasan el smoke test, se publican y el servidor
-las descarga — nunca compila nada.
+etiquetan con el SHA del commit, pasan el smoke test y llegan al servidor tal
+cual — el servidor nunca compila nada. Cómo llegan depende de `DEPLOY_MODE`:
+`local-images` (por defecto, Jenkins en el propio servidor) las re-etiqueta en el
+mismo daemon de Docker; `registry` las publica y el servidor las descarga.
 
 | Etapa | Qué hace | Qué corta el pipeline |
 |-------|----------|----------------------|
@@ -166,8 +168,8 @@ las descarga — nunca compila nada.
 | Build de imágenes | `docker compose build --pull` | `go vet`/`go test` (Go) y eslint/`tsc` (frontend) corren **dentro** de los Dockerfiles |
 | Verificar Django | `manage.py check` y `makemigrations --check` | drift entre modelos y migraciones |
 | Smoke end-to-end | levanta el stack completo y corre `scripts/smoke-test.sh` | cualquier ruta rota, incluido el POST de contacto Go → Django → PostgreSQL → Celery |
-| Publicar imágenes | `docker tag` + `docker push` (solo en `main`) | — |
-| Desplegar | `scripts/deploy.sh` en el servidor (solo en `main`) | smoke test contra producción |
+| Publicar imágenes | `docker tag` + `docker push` (solo en `main`, `DEPLOY_MODE=registry` y `PUSH_IMAGES`) | — |
+| Desplegar | `scripts/deploy-local.sh` o `scripts/deploy.sh` según `DEPLOY_MODE` (solo en `main` y con `DEPLOY`) | servicios que no llegan a healthy; smoke test contra producción |
 
 Las puertas de calidad viven en los Dockerfiles, no en el pipeline: el agente de
 Jenkins solo necesita Docker, y `docker compose up --build` en cualquier máquina
@@ -183,7 +185,8 @@ aplica las mismas comprobaciones.
    despliegas por SSH — *SSH Agent*. Si falta alguno, el pipeline no arranca y el
    error apunta a la directiva que lo usa.
 4. **Credenciales** en Jenkins:
-   - `portfolio-registry` (*Username/Password*) — para publicar las imágenes.
+   - `portfolio-registry` (*Username/Password*) — solo en modo `registry`, para
+     publicar las imágenes.
      En GHCR, el usuario es tu handle y la contraseña un PAT con `write:packages`.
    - `portfolio-deploy-key` (*SSH private key*) — solo si Jenkins no corre en el
      servidor.
@@ -192,14 +195,23 @@ aplica las mismas comprobaciones.
    | Parámetro | Default | Para qué |
    |-----------|---------|----------|
    | `REGISTRY` | `ghcr.io/elvis-david-quinteros-siles` | registry y namespace de las imágenes (minúsculas: GHCR rechaza mayúsculas) |
-   | `DEPLOY_TARGET` | `local` | `local` si Jenkins está en el servidor; si no, `usuario@host` |
-   | `PROJECT_DIR` | `/opt/portfolio` | ruta del checkout en el servidor |
-   | `PUSH_IMAGES` | `true` | publicar en el registry |
-   | `DEPLOY` | `true` | desplegar tras publicar |
+   | `DEPLOY_MODE` | `local-images` | `local-images`: re-etiqueta en el servidor sin registry; `registry`: publica y el servidor descarga |
+   | `DEPLOY_TARGET` | `local` | solo en modo `registry`: `local` si Jenkins está en el servidor; si no, `usuario@host` |
+   | `PROJECT_DIR` | `/home/ubuntu/developer-portfolio` | ruta del checkout en el servidor |
+   | `PUSH_IMAGES` | `false` | publicar en el registry (solo en modo `registry`) |
+   | `DEPLOY` | `true` | desplegar tras el smoke test de CI |
 
-6. **En el servidor**, una vez: clonar el repo en `PROJECT_DIR`, crear el `.env`
-   con los secretos reales, `make db-bootstrap` y `docker login <registry>` (el
-   `docker pull` del deploy usa esa sesión; Jenkins no le pasa credenciales).
+   Ojo con `DEPLOY=true` por defecto: cualquier build de `main` — lanzado a
+   mano, por *Poll SCM* o por webhook — acaba en producción. Para probar sin
+   desplegar, *Build with Parameters* con `DEPLOY` desmarcado. En el primer
+   build de un job nuevo Jenkins aún no conoce los parámetros (los declara el
+   `Jenkinsfile` al ejecutarse), así que solo ofrece *Build Now* con los valores
+   por defecto: decláralos en el job o cancela ese primer build.
+
+6. **En el servidor**, una vez: clonar el repo en `PROJECT_DIR` y crear el `.env`
+   con los secretos reales. En modo `registry`, además, `make db-bootstrap` (si
+   usas Postgres externo) y `docker login <registry>` (el `docker pull` del
+   deploy usa esa sesión; Jenkins no le pasa credenciales).
 
 Los secretos de producción nunca pasan por Jenkins: viven en el `.env` del
 servidor. El pipeline genera su propio `.env` desechable con
@@ -207,6 +219,20 @@ servidor. El pipeline genera su propio `.env` desechable con
 que el stack de CI no choque con el de producción aunque compartan el host. Por
 la misma razón cada build usa un proyecto de Compose aislado
 (`portfolio-ci-<nº>`), pasado con `-p` en todos los comandos.
+
+Ese nombre también se exporta como `COMPOSE_PROJECT_NAME` a todo el pipeline, y
+esa variable manda sobre el `name: portfolio` del compose. Por eso
+`deploy.sh` y `deploy-local.sh` hacen `unset COMPOSE_PROJECT_NAME` al empezar:
+sin eso, el `up` del despliegue recrea el stack de CI con el `.env` de
+producción en vez de tocar producción (le pasó al build #2 del job). Cualquier
+script nuevo que Jenkins invoque sobre el stack de producción necesita lo mismo.
+
+La limpieza final no usa `docker compose down --rmi local`: compose borra la
+primera etiqueta por orden alfabético de la imagen de cada contenedor, y tras un
+despliegue `local-images` esa puede ser la de producción
+(`portfolio-celery-worker:<sha>` va antes que `portfolio-ci-N-celery-worker`).
+En su lugar quita por nombre las etiquetas `portfolio-ci-N-<servicio>`, que solo
+desetiquetan si la imagen tiene otras.
 
 ### Despliegue
 
@@ -238,7 +264,9 @@ en un registry solo para descargarlas de vuelta no aporta nada.
 `scripts/deploy-local.sh` las re-etiqueta como `portfolio-<servicio>:<sha>` y
 `:latest`, avanza el clon del servidor (`PROJECT_DIR`) a ese commit (solo
 fast-forward), recrea el stack con `--no-build` y corre el smoke test contra
-`SMOKE_URL` (por defecto `https://edqs.online`).
+`SMOKE_URL` (por defecto `https://edqs.online`). Solo si el smoke test pasa
+escribe el tag en `.deployed-tag`: ese archivo es siempre la última versión
+desplegada **y verificada**.
 
 Requisitos cuando Jenkins es un contenedor que usa el socket del host:
 
@@ -248,7 +276,10 @@ Requisitos cuando Jenkins es un contenedor que usa el socket del host:
   resuelve los bind mounts del compose de CI (p. ej. `docker/postgres/init`)
   con rutas del host.
 
-Rollback sin recompilar, con un tag desplegado antes:
+Rollback sin recompilar, con un tag desplegado antes (tienen que existir las
+imágenes `portfolio-<servicio>:<tag>` de los seis servicios; compruébalo con
+`docker images 'portfolio-*'`, y si falta alguna, `docker compose up -d --build`
+desde el commit correspondiente):
 
 ```bash
 cd /home/ubuntu/developer-portfolio && IMAGE_TAG=<tag-anterior> sh scripts/deploy-local.sh
