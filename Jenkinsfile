@@ -32,6 +32,14 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '30'))
     }
 
+    // Cada push a GitHub lanza el build vía webhook
+    // (https://jenkins.edqs.online/github-webhook/, evento push). Jenkins solo
+    // registra el trigger tras ejecutar este Jenkinsfile una vez: el primer
+    // build después de añadirlo hay que lanzarlo a mano.
+    triggers {
+        githubPush()
+    }
+
     parameters {
         string(
             name: 'REGISTRY',

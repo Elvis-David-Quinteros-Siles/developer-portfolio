@@ -202,7 +202,7 @@ aplica las mismas comprobaciones.
    | `DEPLOY` | `true` | desplegar tras el smoke test de CI |
 
    Ojo con `DEPLOY=true` por defecto: cualquier build de `main` — lanzado a
-   mano, por *Poll SCM* o por webhook — acaba en producción. Para probar sin
+   mano o por el webhook de cada push — acaba en producción. Para probar sin
    desplegar, *Build with Parameters* con `DEPLOY` desmarcado. En el primer
    build de un job nuevo Jenkins aún no conoce los parámetros (los declara el
    `Jenkinsfile` al ejecutarse), así que solo ofrece *Build Now* con los valores

@@ -253,8 +253,13 @@ Cada build usa un proyecto de Compose aislado (`portfolio-ci-<nº>`) y un `.env`
 desechable con `NGINX_PORT=0`, así que puede correr en el mismo servidor que
 producción sin interferir.
 
-Si el push a `main` no dispara nada, el job no tiene configurado el trigger
-(*GitHub hook trigger* o *Poll SCM*); el pipeline en sí no lo configura.
+El `Jenkinsfile` declara `triggers { githubPush() }`: cada push lanza el build
+a través del webhook de GitHub (*Settings → Webhooks*, payload
+`https://jenkins.edqs.online/github-webhook/`, `application/json`, solo el
+evento *push*). Si un push a `main` no dispara nada, revisa por este orden:
+que el webhook exista y su última entrega haya devuelto 200 (*Recent
+Deliveries*), y que el job se haya ejecutado al menos una vez desde que se
+añadió el trigger: Jenkins solo lo registra al ejecutar el `Jenkinsfile`.
 
 ---
 
