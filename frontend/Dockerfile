@@ -1,16 +1,27 @@
 # syntax=docker/dockerfile:1
 
-# ---------------------------------------------------------------- build ------
-FROM node:22-alpine AS build
+# ---------------------------------------------------------------- deps -------
+FROM node:22-alpine AS deps
 WORKDIR /app
-
-ARG VITE_APP_NAME=Portfolio
-ENV VITE_APP_NAME=${VITE_APP_NAME}
 
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
+
+# ---------------------------------------------------------------- lint -------
+# La stage de build hereda de esta, igual que en los Dockerfiles de Go: si el
+# lint falla, la imagen no puede llegar a existir.
+FROM deps AS lint
+RUN npm run lint
+
+# ---------------------------------------------------------------- build ------
+# `npm run build` es `tsc -b && vite build`: el typecheck también es un gate.
+FROM lint AS build
+
+ARG VITE_APP_NAME=Portfolio
+ENV VITE_APP_NAME=${VITE_APP_NAME}
+
 RUN npm run build
 
 # ---------------------------------------------------------------- serve ------
