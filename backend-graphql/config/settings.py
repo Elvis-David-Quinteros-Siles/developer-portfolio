@@ -122,6 +122,26 @@ ADMIN_PASSWORD = env("ADMIN_PASSWORD", "")
 # Vacío => verificación ReCaptcha deshabilitada (CONTRACTS §7)
 RECAPTCHA_SECRET_KEY = env("RECAPTCHA_SECRET_KEY", "")
 
+# --- Correo ------------------------------------------------------------------
+# Solo se usa cuando NOTIFIER_BACKEND=smtp; con el valor por defecto (`log`) la
+# notificación de contacto va al log estructurado y nada de esto hace falta.
+EMAIL_BACKEND = env("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+EMAIL_HOST = env("EMAIL_HOST", "")
+EMAIL_PORT = int(env("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = env_bool("EMAIL_USE_TLS", "1")
+EMAIL_USE_SSL = env_bool("EMAIL_USE_SSL", "0")
+# Sin timeout, un SMTP que no responde bloquea al worker de Celery hasta que el
+# sistema operativo corte la conexión: minutos con la cola parada.
+EMAIL_TIMEOUT = int(env("EMAIL_TIMEOUT", "10"))
+DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", "") or EMAIL_HOST_USER or "no-reply@localhost"
+
+if EMAIL_USE_TLS and EMAIL_USE_SSL:
+    # Django fallaría al abrir la conexión, ya dentro de la tarea Celery y tras
+    # cinco reintentos. Mejor no arrancar.
+    raise ImproperlyConfigured("EMAIL_USE_TLS y EMAIL_USE_SSL son excluyentes: activa solo uno.")
+
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},

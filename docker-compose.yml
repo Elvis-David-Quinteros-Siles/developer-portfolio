@@ -118,6 +118,19 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       RECAPTCHA_SECRET_KEY: ${RECAPTCHA_SECRET_KEY:-}
+      # Notificación de contacto. Con `log` (default) nada de lo de abajo hace
+      # falta; con `smtp` el worker de Celery envía el correo de verdad.
+      NOTIFIER_BACKEND: ${NOTIFIER_BACKEND:-log}
+      NOTIFY_EMAIL_TO: ${NOTIFY_EMAIL_TO:-}
+      # Se puede apuntar al backend de consola para probar sin SMTP real.
+      EMAIL_BACKEND: ${EMAIL_BACKEND:-django.core.mail.backends.smtp.EmailBackend}
+      EMAIL_HOST: ${EMAIL_HOST:-}
+      EMAIL_PORT: ${EMAIL_PORT:-587}
+      EMAIL_HOST_USER: ${EMAIL_HOST_USER:-}
+      EMAIL_HOST_PASSWORD: ${EMAIL_HOST_PASSWORD:-}
+      EMAIL_USE_TLS: ${EMAIL_USE_TLS:-1}
+      EMAIL_USE_SSL: ${EMAIL_USE_SSL:-0}
+      DEFAULT_FROM_EMAIL: ${DEFAULT_FROM_EMAIL:-}
     depends_on:
       postgres:
         condition: service_healthy

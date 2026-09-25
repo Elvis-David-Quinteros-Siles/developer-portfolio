@@ -153,6 +153,62 @@ docker exec -t <tu-contenedor-postgres> \
 Sigue haciendo falta respaldar el volumen `media` (uploads), que continúa dentro
 del compose.
 
+## Correo del formulario de contacto
+
+El mensaje **siempre** se persiste en PostgreSQL y se puede leer en el admin de
+Django; el correo es solo el aviso. Por defecto ese aviso va al log del worker
+(`NOTIFIER_BACKEND=log`), así que el formulario funciona desde el primer arranque
+sin configurar nada — pero no te enteras de que llegó.
+
+Para recibirlo por correo, en el `.env`:
+
+```bash
+NOTIFIER_BACKEND=smtp
+NOTIFY_EMAIL_TO=tu@correo.com          # quien RECIBE los avisos
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_HOST_USER=tu@gmail.com
+EMAIL_HOST_PASSWORD=xxxxxxxxxxxxxxxx   # contraseña de aplicación, no la de la cuenta
+EMAIL_USE_TLS=1
+DEFAULT_FROM_EMAIL=tu@gmail.com
+```
+
+Reinicia `graphql-api` y `celery-worker` (quien envía es el worker).
+
+Detalles que evitan sorpresas:
+
+- **Gmail exige una contraseña de aplicación**, de 16 caracteres, y para generarla
+  hace falta tener activada la verificación en dos pasos:
+  <https://myaccount.google.com/apppasswords>. La contraseña normal de la cuenta
+  es rechazada desde 2022.
+- `EMAIL_USE_TLS` y `EMAIL_USE_SSL` son **excluyentes**: TLS para el puerto 587,
+  SSL para el 465. Si activas los dos, Django no arranca — falla con un mensaje
+  claro en lugar de romperse dentro de la tarea Celery cinco reintentos después.
+- El `Reply-To` del aviso es la dirección de quien escribió, así que responder
+  desde el cliente de correo le contesta a esa persona y no a ti mismo.
+- Muchos proveedores **rechazan un remitente distinto de la cuenta autenticada**:
+  deja `DEFAULT_FROM_EMAIL` igual a `EMAIL_HOST_USER` salvo que tengas un dominio
+  propio configurado.
+- Si el envío falla, Celery reintenta con backoff exponencial hasta 5 veces. El
+  mensaje ya está guardado: un fallo de SMTP no pierde el contacto.
+- `EMAIL_HOST_PASSWORD` es un secreto. Vive en el `.env` del servidor, que está
+  en `.gitignore`: nunca en el repositorio.
+
+### Probarlo sin credenciales
+
+Con el backend de consola, el correo se imprime en el log del worker en vez de
+enviarse — sirve para verificar el flujo completo:
+
+```bash
+NOTIFIER_BACKEND=smtp
+EMAIL_BACKEND=django.core.mail.backends.console.EmailBackend
+EMAIL_HOST=smtp.example.invalid   # no se usa, pero la validación lo exige
+NOTIFY_EMAIL_TO=destino@example.com
+```
+
+Envía el formulario y mira `docker compose logs celery-worker`: ahí aparece el
+correo completo, con cabeceras.
+
 ## CI/CD con Jenkins
 
 `Jenkinsfile` cubre el ciclo completo para el despliegue con Compose. La idea
