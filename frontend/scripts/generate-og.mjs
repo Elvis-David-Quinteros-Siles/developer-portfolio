@@ -35,9 +35,7 @@ const svg = `
   <rect width="${W}" height="${H}" fill="url(#fade)"/>
   <rect width="${W}" height="${H}" fill="url(#glow)"/>
 
-  <!-- logo eq -->
-  <rect x="92" y="96" width="72" height="72" rx="16" fill="rgba(34,211,238,0.08)" stroke="url(#accent)" stroke-width="2"/>
-  <text x="128" y="144" text-anchor="middle" font-family="Consolas, 'Courier New', monospace" font-size="34" font-weight="700" fill="#22d3ee">eq</text>
+  <!-- el isotipo se compone después con sharp: es un PNG, no cabe en el SVG -->
 
   <!-- nombre -->
   <text x="92" y="330" font-family="'Segoe UI', Arial, sans-serif" font-size="88" font-weight="700" fill="#e4e4e7" letter-spacing="-2">Elvis Quinteros</text>
@@ -67,5 +65,14 @@ const svg = `
 </svg>`;
 
 const out = join(root, "public", "og.png");
-await sharp(Buffer.from(svg), { density: 96 }).png().toFile(out);
+
+// El isotipo de marca va donde antes estaba la insignia "eq", al mismo tamaño.
+const mark = await sharp(join(root, "public", "logo-mark.png"))
+  .resize(76, 76)
+  .toBuffer();
+
+await sharp(Buffer.from(svg), { density: 96 })
+  .composite([{ input: mark, left: 90, top: 94 }])
+  .png()
+  .toFile(out);
 console.log("OK →", out);

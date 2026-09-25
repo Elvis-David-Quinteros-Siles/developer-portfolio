@@ -67,9 +67,15 @@ export function Navbar() {
           className="group flex items-center gap-2 font-mono text-sm font-semibold tracking-tight"
           aria-label="Elvis Quinteros — inicio"
         >
-          <span className="flex size-8 items-center justify-center rounded-lg border border-accent/40 bg-accent/10 text-accent transition-shadow group-hover:glow-accent">
-            eq
-          </span>
+          <img
+            src="/logo-mark.png"
+            alt=""
+            width={32}
+            height={32}
+            // Decorativo: el nombre lo aportan el texto contiguo y el aria-label
+            // del enlace. width/height evitan el salto de layout al cargar.
+            className="size-8 shrink-0 transition-[filter] duration-300 group-hover:drop-shadow-[0_0_10px_rgb(34_211_238/0.5)]"
+          />
           <span className="hidden text-muted transition-colors group-hover:text-ink sm:inline">
             elvis<span className="text-accent">.</span>quinteros
           </span>
