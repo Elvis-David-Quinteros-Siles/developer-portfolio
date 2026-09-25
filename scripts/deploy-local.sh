@@ -31,6 +31,11 @@ WAIT_TIMEOUT=${WAIT_TIMEOUT:-300}
 # base tiene su propio `build`, así que su imagen se llama distinto.
 SERVICES=${DEPLOY_SERVICES:-nginx frontend gateway go-api graphql-api celery-worker}
 
+# Jenkins exporta COMPOSE_PROJECT_NAME=portfolio-ci-N para su stack de prueba y
+# esa variable manda sobre el `name:` del compose: sin esto, el `up` recrearía el
+# stack de CI (con el .env de producción) en vez del de producción.
+unset COMPOSE_PROJECT_NAME
+
 cd "$PROJECT_DIR"
 [ -f .env ] || { echo "ERROR: falta .env en $PROJECT_DIR" >&2; exit 1; }
 

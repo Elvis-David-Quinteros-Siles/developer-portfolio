@@ -22,6 +22,10 @@ TAG_FILE=${TAG_FILE:-.deployed-tag}
 [ -f .env ] || { echo "ERROR: falta .env en $(pwd)" >&2; exit 1; }
 [ -f docker-compose.prod.yml ] || { echo "ERROR: ejecútalo desde la raíz del repo" >&2; exit 1; }
 
+# Si lo invoca Jenkins, hereda su COMPOSE_PROJECT_NAME=portfolio-ci-N, que manda
+# sobre el `name:` del compose y apuntaría al stack de CI.
+unset COMPOSE_PROJECT_NAME
+
 compose() { docker compose -f docker-compose.yml -f docker-compose.prod.yml "$@"; }
 
 export IMAGE_TAG
