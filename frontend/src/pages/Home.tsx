@@ -13,6 +13,7 @@ import { HoloAR } from "@/components/sections/HoloAR";
 import { Projects } from "@/components/sections/Projects";
 import { Showcase } from "@/components/sections/Showcase";
 import { Skills } from "@/components/sections/Skills";
+import { StockNova } from "@/components/sections/StockNova";
 import { useDocumentTitle } from "@/hooks/useDocumentTitle";
 
 export default function Home() {
@@ -40,6 +41,7 @@ export default function Home() {
       <Projects />
       <HoloAR />
       <AnimeRecommender />
+      <StockNova />
       <Architecture />
       <Certifications />
       <Education />

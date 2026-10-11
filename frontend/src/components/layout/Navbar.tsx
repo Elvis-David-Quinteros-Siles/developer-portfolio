@@ -14,6 +14,7 @@ const NAV_LINKS = [
   { to: "/#projects", label: "Proyectos" },
   { to: "/#holo", label: "AR" },
   { to: "/#anime", label: "IA" },
+  { to: "/#stocknova", label: "Inventario" },
   { to: "/#architecture", label: "Arquitectura" },
   { to: "/blog", label: "Blog" },
   { to: "/#contact", label: "Contacto" },
