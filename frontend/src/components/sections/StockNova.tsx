@@ -21,6 +21,9 @@ import { Card } from "@/components/ui/card";
 
 /** App en producción (proyecto ~/stocknova, servido en stocknova.edqs.online). */
 const APP_URL = "https://stocknova.edqs.online";
+/** Cuenta pública con rol "Demo": la API bloquea toda escritura (middleware ReadOnlyDemo). */
+const DEMO_EMAIL = "demo@edqs.online";
+const DEMO_PASSWORD = "demo-stocknova";
 
 const MODULES = [
   { icon: Package, text: "Productos con precios por tipo de cliente, imágenes e importación desde Excel." },
@@ -85,8 +88,15 @@ export function StockNova() {
               <pre className="overflow-x-auto rounded-lg border border-line-strong p-4 font-mono text-xs leading-relaxed text-ink">
                 {FLOW.join("\n")}
               </pre>
-              <p className="mt-4 text-sm leading-relaxed text-muted">
-                El panel requiere cuenta. Si quieres recorrerlo, escríbeme y te doy un acceso de demostración.
+              <p className="mt-6 mb-2 font-mono text-xs uppercase tracking-[0.2em] text-violet">cuenta demo · solo lectura</p>
+              <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 rounded-lg border border-line-strong p-4 font-mono text-sm">
+                <dt className="text-muted">usuario</dt>
+                <dd className="text-ink select-all">{DEMO_EMAIL}</dd>
+                <dt className="text-muted">clave</dt>
+                <dd className="text-ink select-all">{DEMO_PASSWORD}</dd>
+              </dl>
+              <p className="mt-3 text-sm leading-relaxed text-muted">
+                Puedes recorrer todos los módulos; las operaciones de escritura están bloqueadas en la API.
               </p>
               <div className="mt-auto flex flex-wrap gap-3 pt-6">
                 <Button asChild>
@@ -98,7 +108,7 @@ export function StockNova() {
                 <Button asChild variant="outline">
                   <Link to="/#contact">
                     <Mail aria-hidden="true" />
-                    Pedir acceso
+                    Contactar
                   </Link>
                 </Button>
               </div>
