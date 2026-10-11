@@ -2,12 +2,14 @@ import { useEffect } from "react";
 import { useLocation } from "react-router";
 
 import { About } from "@/components/sections/About";
+import { AnimeRecommender } from "@/components/sections/AnimeRecommender";
 import { Architecture } from "@/components/sections/Architecture";
 import { Certifications } from "@/components/sections/Certifications";
 import { Contact } from "@/components/sections/Contact";
 import { Education } from "@/components/sections/Education";
 import { Experience } from "@/components/sections/Experience";
 import { Hero } from "@/components/sections/Hero";
+import { HoloAR } from "@/components/sections/HoloAR";
 import { Projects } from "@/components/sections/Projects";
 import { Showcase } from "@/components/sections/Showcase";
 import { Skills } from "@/components/sections/Skills";
@@ -36,6 +38,8 @@ export default function Home() {
       <Skills />
       <Experience />
       <Projects />
+      <HoloAR />
+      <AnimeRecommender />
       <Architecture />
       <Certifications />
       <Education />

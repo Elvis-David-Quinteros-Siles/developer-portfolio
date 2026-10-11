@@ -12,6 +12,8 @@ const NAV_LINKS = [
   { to: "/#skills", label: "Tecnologías" },
   { to: "/#experience", label: "Experiencia" },
   { to: "/#projects", label: "Proyectos" },
+  { to: "/#holo", label: "AR" },
+  { to: "/#anime", label: "IA" },
   { to: "/#architecture", label: "Arquitectura" },
   { to: "/blog", label: "Blog" },
   { to: "/#contact", label: "Contacto" },
