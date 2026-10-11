@@ -47,7 +47,7 @@ images:
   newTag: 33a9b6d8bff16838101a6198822e0db72104c167
 - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
   newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-frontend
-  newTag: 33a9b6d8bff16838101a6198822e0db72104c167
+  newTag: f06d8b319826945f24e3dd5a9835ad38d9b3f9dd
 - name: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
   newName: ghcr.io/elvis-david-quinteros-siles/developer-portfolio-gateway
   newTag: 3c56c7d53893efc2f9827bc0fe6dcea6c24b83f7
