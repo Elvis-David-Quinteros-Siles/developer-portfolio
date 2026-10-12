@@ -3,6 +3,7 @@ import { useLocation } from "react-router";
 
 import { About } from "@/components/sections/About";
 import { AnimeRecommender } from "@/components/sections/AnimeRecommender";
+import { BlogPlatform } from "@/components/sections/BlogPlatform";
 import { Architecture } from "@/components/sections/Architecture";
 import { Certifications } from "@/components/sections/Certifications";
 import { Contact } from "@/components/sections/Contact";
@@ -42,6 +43,7 @@ export default function Home() {
       <HoloAR />
       <AnimeRecommender />
       <StockNova />
+      <BlogPlatform />
       <Architecture />
       <Certifications />
       <Education />
